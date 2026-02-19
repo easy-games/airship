@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Editor.EditorInternal {
+namespace Easy.Airship.Editor.EditorInternal {
     public static class GUIViewExtensions {
         public static float v = 10;
         internal static IMGUIContainer GetIMGUIContainerForStatusbar() {

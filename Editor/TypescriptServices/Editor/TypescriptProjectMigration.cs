@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Editor.Util;
+using Easy.Airship.Editor.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using UnityEditor;

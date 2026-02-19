@@ -1,6 +1,6 @@
 ﻿using UnityEditor;
 
-namespace Editor.EditorInternal {
+namespace Easy.Airship.Editor.EditorInternal {
     public static class AssetImporterExtensions {
         internal static bool IsPrefabImporter(this AssetImporter importer) {
             return importer is PrefabImporter;

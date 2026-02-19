@@ -9,7 +9,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Editor.Accessories {
+namespace Easy.Airship.Editor.Accessories {
 
     public class AccessoryEditorWindow : EditorWindow {
         private enum BackdropType{

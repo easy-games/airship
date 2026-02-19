@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEditor;
-using Editor.Accessories;
+using Easy.Airship.Editor.Accessories;
 using System.Linq;
 using Code.Player.Accessories;
 using Code.Platform.Server;

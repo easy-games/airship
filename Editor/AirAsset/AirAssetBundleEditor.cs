@@ -8,15 +8,15 @@ using Code.AirAssetBundle;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Platform.Shared;
-using Editor.Accessories.Clothing;
-using Editor.Packages;
+using Easy.Airship.Editor.Accessories.Clothing;
+using Easy.Airship.Editor.Packages;
 using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 
-namespace Editor.AirAsset {
+namespace Easy.Airship.Editor.AirAsset {
     [CustomEditor(typeof(AirAssetBundle))]
     [CanEditMultipleObjects]
     public class AirAssetBundleEditor : UnityEditor.Editor {

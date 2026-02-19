@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.Assets {
+namespace Easy.Airship.Editor.Assets {
     public class AudioAssetPostProcessor : AssetPostprocessor {
         private static HashSet<string> processedClips = new HashSet<string>();
 

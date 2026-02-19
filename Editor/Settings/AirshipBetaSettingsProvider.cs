@@ -3,7 +3,7 @@ using Airship.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.Settings {
+namespace Easy.Airship.Editor.Settings {
     public class AirshipBetaSettingsProvider : SettingsProvider {
          public const string Path = "Project/Airship/Betas";
 

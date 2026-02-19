@@ -10,7 +10,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace Editor.Packages {
+namespace Easy.Airship.Editor.Packages {
     [InitializeOnLoad]
     public class AirshipPackageAutoUpdater : AssetPostprocessor {
         private static double lastChecked = -40;

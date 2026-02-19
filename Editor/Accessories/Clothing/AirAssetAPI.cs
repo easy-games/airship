@@ -4,7 +4,7 @@ using Code.Bootstrap;
 
 // ReSharper disable InconsistentNaming
 
-namespace Editor.Accessories.Clothing {
+namespace Easy.Airship.Editor.Accessories.Clothing {
     [Serializable]
     public class AirAssetCreateRequest {
         public string contentType;

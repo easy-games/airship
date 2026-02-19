@@ -30,7 +30,7 @@ using Object = UnityEngine.Object;
 using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
 // ReSharper disable ReplaceWithSingleAssignment.True
 
-namespace Editor.Packages {
+namespace Easy.Airship.Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
         private static Dictionary<string, long> urlUploadProgress = new();
         private static long uploadSizeBytes = 0; 

@@ -5,7 +5,7 @@ using Luau;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.Settings {
+namespace Easy.Airship.Editor.Settings {
     /// <summary>
     /// The local artifact database for Airship's Editor - stored in <code>Library/AirshipArtifactDB</code>
     /// This contains the state of the scripts and components for the local project

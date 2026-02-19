@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.Accessories {
+namespace Easy.Airship.Editor.Accessories {
     [CustomEditor(typeof(AccessoryPrefabEditor))]
     public class AccessoryPrefabEditorInspector : UnityEditor.Editor {
         public override void OnInspectorGUI() {

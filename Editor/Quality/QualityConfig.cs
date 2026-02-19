@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using ShadowResolution = UnityEngine.Rendering.Universal.ShadowResolution;
 
-namespace Editor.Quality {
+namespace Easy.Airship.Editor.Quality {
     [InitializeOnLoad]
     public class QualityConfig {
         private const string LOW_QUALITY_NAME = "Low";

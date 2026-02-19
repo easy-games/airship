@@ -1,6 +1,6 @@
 ﻿#if UNITY_EDITOR
 using System.IO;
-using Editor.Util;
+using Easy.Airship.Editor.Util;
 using Luau;
 using UnityEditor;
 using UnityEditor.Callbacks;

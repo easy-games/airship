@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
 using Code.Bootstrap;
-using Editor;
-using Editor.Util;
+using Easy.Airship.Editor;
+using Easy.Airship.Editor.Util;
 using UnityEditor;
 using UnityEngine;
 

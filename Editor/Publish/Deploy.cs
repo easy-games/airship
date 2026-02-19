@@ -11,7 +11,7 @@ using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Luau.LuauAssembly.Protection;
 using Code.Platform.Shared;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using Luau;
 using Proyecto26;
 using Unity.VisualScripting.IonicZip;

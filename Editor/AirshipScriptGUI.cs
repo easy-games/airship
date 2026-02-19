@@ -1,6 +1,6 @@
 ﻿#if UNITY_EDITOR
 using System;
-using Editor.EditorInternal;
+using Easy.Airship.Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;

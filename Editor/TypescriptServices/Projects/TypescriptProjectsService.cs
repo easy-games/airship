@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using CsToTs.TypeScript;
-using Editor;
+using Easy.Airship.Editor;
 using JetBrains.Annotations;
 using Mirror.BouncyCastle.Math.EC;
 using UnityEditor;

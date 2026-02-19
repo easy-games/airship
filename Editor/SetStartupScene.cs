@@ -1,11 +1,11 @@
 using System;
 using System.Collections;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Editor {
+namespace Easy.Airship.Editor {
     public class EditorInit : AssetPostprocessor {
         private static GameConfig _gameConfig;
 

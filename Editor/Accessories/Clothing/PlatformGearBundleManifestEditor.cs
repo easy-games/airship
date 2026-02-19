@@ -11,7 +11,7 @@ using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Platform.Shared;
 using Code.Player.Accessories;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
@@ -19,7 +19,7 @@ using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
-namespace Editor.Accessories.Clothing {
+namespace Easy.Airship.Editor.Accessories.Clothing {
     [CustomEditor(typeof(PlatformGearBundleManifest))]
     [CanEditMultipleObjects]
     public class PlatformGearBundleManifestEditor : UnityEditor.Editor {

@@ -13,7 +13,7 @@ using UnityEngine;
 using UnityEditor.OSXStandalone;
 #endif
 
-namespace Editor {
+namespace Easy.Airship.Editor {
     public class BuildMenu {
         private const string ClientExecutableName = "airship";
         private const string ServerExecutableName = "StandaloneLinux64";
