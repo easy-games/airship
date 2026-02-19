@@ -37,7 +37,7 @@ public static class PhysicsSetup {
 
         // Reserved for future use
         for (var i = NumberOfCoreLayers; i < GameLayerStartIndex; i++) {
-            PhysicsLayerEditor.SetLayer(i, "");
+            PhysicsLayerEditor.SetLayer(i, "AirshipReserved" + (i - NumberOfCoreLayers));
         }
 #endif
 
