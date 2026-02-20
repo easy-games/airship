@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Mirror
 {
@@ -111,11 +112,14 @@ namespace Mirror
 
         // predicted time is sent to compare the final error, for debugging only
         public double predictedTimeAdjusted;
-
-        public NetworkPingMessage(double localTime, double predictedTimeAdjusted)
+        
+        public ushort sequenceNumber;
+        public NetworkPingMessage(double localTime, double predictedTimeAdjusted,
+            ushort sequenceNumber = 0)
         {
             this.localTime = localTime;
             this.predictedTimeAdjusted = predictedTimeAdjusted;
+            this.sequenceNumber = sequenceNumber;
         }
     }
 
@@ -130,11 +134,21 @@ namespace Mirror
         public double predictionErrorUnadjusted;
         public double predictionErrorAdjusted; // for debug purposes
 
-        public NetworkPongMessage(double localTime, double predictionErrorUnadjusted, double predictionErrorAdjusted)
+        // for packet loss tracking (Source-engine ack+bitmask style)
+        public ushort sequenceNumber; // response sequence number
+        public ushort receivedSeqNumber; // highest received sequence number
+        public uint   receivedSeqMask; // record of last 32 received seq numbers as a bit mask. (receivedSeqNum not included)
+
+        public NetworkPongMessage(double localTime, double predictionErrorUnadjusted,
+            double predictionErrorAdjusted, ushort sequenceNumber = 0,
+            ushort receivedSeqNumber = 0, uint receivedSeqMask = 0)
         {
             this.localTime = localTime;
             this.predictionErrorUnadjusted = predictionErrorUnadjusted;
             this.predictionErrorAdjusted = predictionErrorAdjusted;
+            this.sequenceNumber = sequenceNumber;
+            this.receivedSeqNumber = receivedSeqNumber;
+            this.receivedSeqMask = receivedSeqMask;
         }
     }
 }

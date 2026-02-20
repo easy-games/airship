@@ -49,6 +49,13 @@ namespace Mirror
         // ping for rtt (round trip time)
         // useful for statistics, lag compensation, etc.
         double lastPingTime = 0;
+
+        // The last sequence number the server sent to this client in the server PONG message.
+        internal ushort pongSequenceNumber;
+        // The highest ping sequence number we have received from this client.
+        internal ushort receivedSeqNumber;
+        // Bit mask of if the last 32 seq numbers before receivedSeqNumber were received from this client.
+        internal uint receivedSeqMask;
         internal ExponentialMovingAverage _rtt = new ExponentialMovingAverage(NetworkTime.PingWindowSize);
 
         /// <summary>Round trip time (in seconds) that it takes a message to go server->client->server.</summary>

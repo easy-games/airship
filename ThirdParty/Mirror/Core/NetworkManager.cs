@@ -17,6 +17,7 @@ namespace Mirror
     public class NetworkManager : MonoBehaviour
     {
         public static event Action onClientSetup;
+        public static event Action onServerSetup;
         
         /// <summary>
         /// Fired when a client connection's IsReady becomes true
@@ -358,6 +359,7 @@ namespace Mirror
             // this must be after Listen(), since that registers the default message handlers
             RegisterServerMessages();
 
+            onServerSetup?.Invoke();
             // do not call OnStartServer here yet.
             // this is up to the caller. different for server-only vs. host mode.
         }
@@ -853,6 +855,7 @@ namespace Mirror
             singleton = null;
             
             onClientSetup = null;
+            onServerSetup = null;
             OnServerReadyEvent = null;
             OnServerConnectEvent = null;
             OnStopServerEvent = null;
