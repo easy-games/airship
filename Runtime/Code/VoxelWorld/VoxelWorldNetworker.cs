@@ -74,7 +74,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             packetChunks.Add(world.chunks[pos]);
             sentPositions.Add(pos);
 
-            if (i % chunksPerFrame == 0) {
+            if (i % chunksPerFrame == chunksPerFrame-1 || i == world.chunks.Count - 1) {
                 RpcWriteChunks(connection, packetPositions.ToArray(), packetChunks.ToArray(), false);
                 packetPositions.Clear();
                 packetChunks.Clear();
@@ -142,6 +142,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     public void RpcFinishedSendingWorld(NetworkConnection connection) {
         world.renderingDisabled = false;
         Profiler.BeginSample("RpcFinishedSendingWorld.RegenMeshes");
+        world.DeleteRenderedGameObjects();
         world.RegenerateAllMeshes();
         Profiler.EndSample();
         world.InvokeOnFinishedReplicatingChunksFromServer();
