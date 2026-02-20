@@ -77,7 +77,6 @@ namespace Mirror
             if (setupEvents == true) return;
             
             // find available transport
-            print("setting up transport events");
             Transport transport = Transport.active;
             if (transport) {
                 transport.OnClientDataReceived += OnClientReceive;
