@@ -35,7 +35,11 @@ public static class CreateAssetBundles {
 	}
 
 	private static void LogPublishedShaderUsage(List<AssetBundleBuild> builds, AirshipPlatform platform) {
+		var reportPath = GetShaderUsageReportPath();
 		if (builds == null) {
+			var emptyMessage = $"[Airship] Shader usage report ({platform}): no build inputs.\nReport file: {reportPath}";
+			WriteShaderUsageReportToFile(reportPath, emptyMessage);
+			Debug.Log(emptyMessage);
 			return;
 		}
 
@@ -43,7 +47,9 @@ public static class CreateAssetBundles {
 		// reference bundles) are intentionally excluded from this report.
 		var gameBuilds = builds.Where((b) => IsGameBundleName(b.assetBundleName)).ToList();
 		if (gameBuilds.Count == 0) {
-			Debug.Log($"[Airship] Shader usage report ({platform}): no game bundle inputs found.");
+			var noInputMessage = $"[Airship] Shader usage report ({platform}): no game bundle inputs found.\nReport file: {reportPath}";
+			WriteShaderUsageReportToFile(reportPath, noInputMessage);
+			Debug.Log(noInputMessage);
 			return;
 		}
 
@@ -61,7 +67,9 @@ public static class CreateAssetBundles {
 		}
 
 		if (publishedAssetPaths.Count == 0) {
-			Debug.Log($"[Airship] Shader usage report ({platform}): game bundles are empty.");
+			var emptyBundlesMessage = $"[Airship] Shader usage report ({platform}): game bundles are empty.\nReport file: {reportPath}";
+			WriteShaderUsageReportToFile(reportPath, emptyBundlesMessage);
+			Debug.Log(emptyBundlesMessage);
 			return;
 		}
 
@@ -132,6 +140,7 @@ public static class CreateAssetBundles {
 
 		var sb = new StringBuilder();
 		sb.AppendLine($"[Airship] Shader usage report ({platform})");
+		sb.AppendLine($"Report file: {reportPath}");
 		sb.AppendLine("Game bundle scope: shared/resources + shared/scenes");
 		sb.AppendLine($"Published assets: {publishedAssetPaths.Count}");
 		sb.AppendLine($"Materials: {materialPaths.Count}");
@@ -140,7 +149,28 @@ public static class CreateAssetBundles {
 		AppendShaderUsageSection(sb, "CoreMaterials Shaders", coreMaterialsShaders);
 		sb.AppendLine();
 		AppendShaderUsageSection(sb, "Other Shaders", nonCoreMaterialsShaders);
-		Debug.Log(sb.ToString());
+		var reportText = sb.ToString();
+		WriteShaderUsageReportToFile(reportPath, reportText);
+		Debug.Log(reportText);
+	}
+
+	private static string GetShaderUsageReportPath() {
+		var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+		var buildFolder = Path.Combine(projectRoot, "build");
+		return Path.Combine(buildFolder, "shader_usage_report.txt");
+	}
+
+	private static void WriteShaderUsageReportToFile(string reportPath, string text) {
+		try {
+			var folder = Path.GetDirectoryName(reportPath);
+			if (!string.IsNullOrEmpty(folder)) {
+				Directory.CreateDirectory(folder);
+			}
+
+			File.WriteAllText(reportPath, text ?? string.Empty);
+		} catch (Exception ex) {
+			Debug.LogWarning($"[Airship] Failed to write shader usage report file at {reportPath}: {ex.Message}");
+		}
 	}
 
 	private static bool IsCoreMaterialsAttributedShader(ShaderUsageInfo shader) {
