@@ -842,7 +842,11 @@ namespace VoxelWorldStuff {
 
                         for (var i = 0; i < 3; i++) {
                             if (detailGameObjects[i] != null) {
-                                Object.Destroy(detailGameObjects[i]);
+                                if (Application.isPlaying) {
+                                    Object.Destroy(detailGameObjects[i]);
+                                } else {
+                                    Object.DestroyImmediate(detailGameObjects[i]);
+                                }
                             }
                             detailGameObjects[i] = new GameObject();
                             detailGameObjects[i].layer = world.gameObject.layer;
@@ -875,7 +879,11 @@ namespace VoxelWorldStuff {
 
                         // Setup lod'd shadows
                         if (shadowRenderer != null) {
-                            Object.Destroy(shadowRenderer.gameObject);
+                            if (Application.isPlaying) {
+                                Object.Destroy(shadowRenderer.gameObject);
+                            } else {
+                                Object.DestroyImmediate(shadowRenderer.gameObject);
+                            }
                         }
                         var shadowGo = new GameObject("ShadowCaster", typeof(MeshFilter), typeof(MeshRenderer));
                         var shadowFilter = shadowGo.GetComponent<MeshFilter>();
