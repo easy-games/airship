@@ -38,6 +38,10 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
     [Command(requiresAuthority = false)]
     public void OnReadyCommand(NetworkConnectionToClient connection = null) {
+        if (RunCore.IsClient() && RunCore.IsServer()) {
+            // Running in shared editor
+            return;
+        }
         // SendAllChunks(client);
         StartCoroutine(SlowlySendChunks(connection, new List<Vector3Int>()));
     }
