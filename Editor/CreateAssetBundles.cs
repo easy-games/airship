@@ -495,20 +495,78 @@ public static class CreateAssetBundles {
 			? GetPackageAssetBundleBuilds(gameConfig.compileURPShaders)
 			: new List<AssetBundleBuild>();
 
+		// Moving MonoScript/code assets out of scene bundle ownership can break runtime Behaviour resolution.
+		bool IsCodeAssetPath(string path) {
+			return path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+			       || path.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)
+			       || path.EndsWith(".asmref", StringComparison.OrdinalIgnoreCase)
+			       || path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
+		}
+
+		bool IsPackageOwnedPath(string path) {
+			return path.StartsWith("Assets/AirshipPackages/", StringComparison.OrdinalIgnoreCase)
+			       || path.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase);
+		}
+
+		var scenePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var scene in gameConfig.gameScenes) {
+			var scenePath = AssetDatabase.GetAssetPath((SceneAsset)scene);
+			if (!string.IsNullOrEmpty(scenePath)) {
+				scenePaths.Add(scenePath);
+			}
+		}
+
+		var explicitlyAddedScenePaths = AssetDatabase.GetAssetPathsFromAssetBundle("scenes");
+		var explicitlyAddedNonScenePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		var explicitlyPinnedScenePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		if (explicitlyAddedScenePaths.Length > 0) {
+			Debug.Log($"Found {explicitlyAddedScenePaths.Length} explicit assets for scenes bundle.");
+			foreach (var path in explicitlyAddedScenePaths) {
+				if (string.IsNullOrEmpty(path)) {
+					continue;
+				}
+
+				if (path.EndsWith(".unity", StringComparison.OrdinalIgnoreCase)) {
+					scenePaths.Add(path);
+				} else if (IsCodeAssetPath(path)) {
+					explicitlyPinnedScenePaths.Add(path);
+				} else {
+					explicitlyAddedNonScenePaths.Add(path);
+				}
+			}
+		}
+
+		var sceneReferencedAssetPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		if (scenePaths.Count > 0) {
+			var dependencies = AssetDatabase.GetDependencies(scenePaths.ToArray(), true);
+			foreach (var dependency in dependencies) {
+				if (string.IsNullOrEmpty(dependency)) {
+					continue;
+				}
+
+				if (scenePaths.Contains(dependency)) {
+					continue;
+				}
+
+				if (IsCodeAssetPath(dependency)) {
+					continue;
+				}
+
+				if (IsPackageOwnedPath(dependency)) {
+					continue;
+				}
+
+				sceneReferencedAssetPaths.Add(dependency);
+			}
+		}
+		sceneReferencedAssetPaths.UnionWith(explicitlyAddedNonScenePaths.Where((p) => !IsPackageOwnedPath(p)));
+
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLowerInvariant();
 			if (assetBundleName == "shared/scenes") {
-				var assetGuids = gameConfig.gameScenes
-					.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s)).ToHashSet();
-
-				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("scenes");
-				Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for scenes bundle.");
-				foreach (var path in explicitlyAddedPaths) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID(path));
-				}
-
-				string[] assetPaths = assetGuids
-					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+				string[] assetPaths = scenePaths
+					.Concat(explicitlyPinnedScenePaths)
+					.Where((path) => path.EndsWith(".unity", StringComparison.OrdinalIgnoreCase) || IsCodeAssetPath(path))
 					.ToArray();
 
 				var sb = new StringBuilder();
@@ -530,33 +588,52 @@ public static class CreateAssetBundles {
 				};
 				builds.Add(build);
 			} else if (assetBundleName == "shared/resources") {
-				var assetGuids = AssetDatabase.FindAssets("*", new[] { "Assets/Resources" }).ToHashSet();
+				var assetPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				var resourceGuids = AssetDatabase.FindAssets("*", new[] { "Assets/Resources" });
+				foreach (var guid in resourceGuids) {
+					var path = AssetDatabase.GUIDToAssetPath(guid);
+					if (!string.IsNullOrEmpty(path)) {
+						assetPaths.Add(path);
+					}
+				}
+
 				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
+					assetPaths.Add("Assets/Airship.asbuildinfo");
 				}
 				if (AssetDatabase.AssetPathExists("Assets/GameConfig.asset")) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/GameConfig.asset"));
+					assetPaths.Add("Assets/GameConfig.asset");
 				}
 				if (AssetDatabase.AssetPathExists("Assets/NetworkPrefabCollection.asset")) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/NetworkPrefabCollection.asset"));
+					assetPaths.Add("Assets/NetworkPrefabCollection.asset");
 				}
 
 				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("resources");
-				Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for resources bundle.");
-				foreach (var path in explicitlyAddedPaths) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID(path));
+				if (explicitlyAddedPaths.Length > 0) {
+					Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for resources bundle.");
+					foreach (var path in explicitlyAddedPaths) {
+						if (!string.IsNullOrEmpty(path) && !IsCodeAssetPath(path) && !IsPackageOwnedPath(path)) {
+							assetPaths.Add(path);
+						}
+					}
 				}
 
-				var assetPaths = assetGuids
-					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
+				foreach (var sceneReferencedAssetPath in sceneReferencedAssetPaths) {
+					assetPaths.Add(sceneReferencedAssetPath);
+				}
+
+				var finalAssetPaths = assetPaths
 					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
+					.Where((p) => !p.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
+					.Where((p) => !IsCodeAssetPath(p))
+					.Where((p) => !IsPackageOwnedPath(p))
 					.Where((path) => !path.ToLowerInvariant().Contains("editor/"))
+					.Where((p) => AssetDatabase.AssetPathExists(p))
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
-				var addressableNames = assetPaths.Select((p) => p.ToLowerInvariant()).ToArray();
+				var addressableNames = finalAssetPaths.Select((p) => p.ToLowerInvariant()).ToArray();
 				builds.Add(new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
-					assetNames = assetPaths,
+					assetNames = finalAssetPaths,
 					addressableNames = addressableNames
 				});
 			}
