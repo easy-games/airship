@@ -113,8 +113,25 @@ namespace Mirror
         // predicted time is sent to compare the final error, for debugging only
         public double predictedTimeAdjusted;
         
+        public NetworkPingMessage(double localTime, double predictedTimeAdjusted)
+        {
+            this.localTime = localTime;
+            this.predictedTimeAdjusted = predictedTimeAdjusted;
+        }
+    }
+    
+    // whoever wants to measure rtt, sends this to the other end.
+    public struct NetworkPingMessageV2 : NetworkMessage
+    {
+        // local time is used to calculate round trip time,
+        // and to calculate the predicted time offset.
+        public double localTime;
+
+        // predicted time is sent to compare the final error, for debugging only
+        public double predictedTimeAdjusted;
+        
         public ushort sequenceNumber;
-        public NetworkPingMessage(double localTime, double predictedTimeAdjusted,
+        public NetworkPingMessageV2(double localTime, double predictedTimeAdjusted,
             ushort sequenceNumber = 0)
         {
             this.localTime = localTime;
@@ -134,12 +151,32 @@ namespace Mirror
         public double predictionErrorUnadjusted;
         public double predictionErrorAdjusted; // for debug purposes
 
+        public NetworkPongMessage(double localTime, double predictionErrorUnadjusted,
+            double predictionErrorAdjusted)
+        {
+            this.localTime = localTime;
+            this.predictionErrorUnadjusted = predictionErrorUnadjusted;
+            this.predictionErrorAdjusted = predictionErrorAdjusted;
+        }
+    }
+    
+    // the other end responds with this message.
+    // we can use this to calculate rtt.
+    public struct NetworkPongMessageV2 : NetworkMessage
+    {
+        // local time is used to calculate round trip time.
+        public double localTime;
+
+        // predicted error is used to adjust the predicted timeline.
+        public double predictionErrorUnadjusted;
+        public double predictionErrorAdjusted; // for debug purposes
+
         // for packet loss tracking (Source-engine ack+bitmask style)
         public ushort sequenceNumber; // response sequence number
         public ushort receivedSeqNumber; // highest received sequence number
         public uint   receivedSeqMask; // record of last 32 received seq numbers as a bit mask. (receivedSeqNum not included)
 
-        public NetworkPongMessage(double localTime, double predictionErrorUnadjusted,
+        public NetworkPongMessageV2(double localTime, double predictionErrorUnadjusted,
             double predictionErrorAdjusted, ushort sequenceNumber = 0,
             ushort receivedSeqNumber = 0, uint receivedSeqMask = 0)
         {

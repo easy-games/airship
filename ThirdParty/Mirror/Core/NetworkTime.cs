@@ -166,7 +166,7 @@ namespace Mirror
             // send raw predicted time without the offset applied yet.
             // we then apply the offset to it after.
             _pingSequenceNumber++;
-            NetworkPingMessage pingMessage = new NetworkPingMessage(
+            NetworkPingMessageV2 pingMessage = new NetworkPingMessageV2(
                 localTime,
                 predictedTime,
                 sequenceNumber: _pingSequenceNumber
@@ -193,10 +193,31 @@ namespace Mirror
             double adjustedError = localTime - message.predictedTimeAdjusted;
             // Debug.Log($"[Server] unadjustedError:{(unadjustedError*1000):F1}ms adjustedError:{(adjustedError*1000):F1}ms");
 
+            NetworkPongMessage pongMessage = new NetworkPongMessage(
+                message.localTime,
+                unadjustedError,
+                adjustedError
+            );
+            conn.Send(pongMessage, Channels.Unreliable);
+        }
+
+        internal static void OnServerPingV2(NetworkConnectionToClient conn, NetworkPingMessageV2 message) {
+            // calculate the prediction offset that the client needs to apply to unadjusted time to reach server time.
+            // this will be sent back to client for corrections.
+            double unadjustedError = localTime - message.localTime;
+
+            // to see how well the client's final prediction worked, compare with adjusted time.
+            // this is purely for debugging.
+            // >0 means: server is ... seconds ahead of client's prediction (good if small)
+            // <0 means: server is ... seconds behind client's prediction.
+            //           in other words, client is predicting too far ahead (not good)
+            double adjustedError = localTime - message.predictedTimeAdjusted;
+            // Debug.Log($"[Server] unadjustedError:{(unadjustedError*1000):F1}ms adjustedError:{(adjustedError*1000):F1}ms");
+
             UpdateSequenceMask(ref message.sequenceNumber, ref conn.receivedSeqNumber, ref conn.receivedSeqMask);
             
             conn.pongSequenceNumber++;
-            NetworkPongMessage pongMessage = new NetworkPongMessage(
+            NetworkPongMessageV2 pongMessage = new NetworkPongMessageV2(
                 message.localTime,
                 unadjustedError,
                 adjustedError,
@@ -212,6 +233,21 @@ namespace Mirror
         // and update time offset & prediction offset.
         internal static void OnClientPong(NetworkPongMessage message)
         {
+            // prevent attackers from sending timestamps which are in the future
+            if (message.localTime > localTime) return;
+
+            // how long did this message take to come back
+            double newRtt = localTime - message.localTime;
+            _rtt.Add(newRtt);
+
+            // feed unadjusted prediction error into our exponential moving average
+            // store adjusted prediction error for debug / GUI purposes
+            _predictionErrorUnadjusted.Add(message.predictionErrorUnadjusted);
+            predictionErrorAdjusted = message.predictionErrorAdjusted;
+            // Debug.Log($"[Client] predictionError avg={(_predictionErrorUnadjusted.Value*1000):F1} ms");
+        }
+
+        internal static void OnClientPongV2(NetworkPongMessageV2 message) {
             // prevent attackers from sending timestamps which are in the future
             if (message.localTime > localTime) return;
 
