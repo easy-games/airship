@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Luau;
 using UnityEngine;
 using UnityEngine.Profiling;
+using Object = UnityEngine.Object;
 
 public static class AirshipBehaviourHelper {
     private static readonly List<int> ComponentIds = new();
@@ -67,6 +68,59 @@ public static class AirshipBehaviourHelper {
         var result = targetTypeScriptPath != null && buildInfo.Inherits(airshipComponent.script, targetTypeScriptPath);
         Profiler.EndSample();
         return result;
+    }
+
+    public static int FindFirstAirshipObjectByType(LuauContext context, IntPtr thread,
+        string typeName, FindObjectsInactive findObjectsInactive = FindObjectsInactive.Exclude) {
+        var buildInfo = AirshipBuildInfo.Instance;
+        var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
+
+        var components = Object.FindObjectsByType<AirshipComponent>(findObjectsInactive, FindObjectsSortMode.InstanceID);
+        foreach (var component in components) {
+            if (!IsTypeOrInheritingType(component, typeName, targetTypeScriptPath)) continue;
+            var unityInstanceId = GetAirshipBehaviourRootId(component.gameObject);
+            LuauPlugin.PushAirshipComponent(context, thread, unityInstanceId, component.GetAirshipComponentId());
+            return 1;
+        }
+
+        return PushNil(thread);
+    }
+    
+    public static int FindAirshipsObjectByType(LuauContext context, IntPtr thread,
+        string typeName, FindObjectsInactive findObjectsInactive = FindObjectsInactive.Exclude, FindObjectsSortMode sortMode = FindObjectsSortMode.InstanceID) {
+
+        var components = Object.FindObjectsByType<AirshipComponent>(findObjectsInactive, sortMode);
+        foreach (var component in components) {
+            GetAirshipBehaviourRootId(component.gameObject);
+        }
+        
+        var buildInfo = AirshipBuildInfo.Instance;
+        var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
+        var componentIdsByUnityInstanceIds = new Dictionary<int, List<int>>();
+
+        foreach (var airshipComponent in components) {
+            if (!IsTypeOrInheritingType(airshipComponent, typeName, targetTypeScriptPath)) continue;
+            airshipComponent.Init();
+            
+            var componentId = airshipComponent.GetAirshipComponentId();
+            var unityInstanceId = AirshipBehaviourRootV2.GetId(airshipComponent);
+            if (!componentIdsByUnityInstanceIds.ContainsKey(unityInstanceId)) {
+                componentIdsByUnityInstanceIds.Add(unityInstanceId, new List<int>());
+            }
+            componentIdsByUnityInstanceIds[unityInstanceId].Add(componentId);
+        }
+        
+        if (componentIdsByUnityInstanceIds.Count > 0) {
+            var first = true;
+            foreach (var (unityInstanceId, componentIds) in componentIdsByUnityInstanceIds) {
+                LuauPlugin.PushAirshipComponents(context, thread, unityInstanceId, componentIds.ToArray(), !first);
+                first = false;
+            }
+
+            return 1;
+        }
+
+        return PushEmptyTable(thread);
     }
     
     public static int GetAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {

@@ -143,6 +143,48 @@ public class GameObjectAPI : BaseLuaAPIClass {
             if (result != -1) return result;
         }
 #endif
+        if (methodName == "FindFirstObjectByType") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            if (typeName == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: FindFirstObjectByType takes a string parameter");
+                return 0;
+            }
+
+            var objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            
+            if (numParameters == 2) {
+                var findInactive = LuauCore.GetParameterAsInt32(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                var ret = Object.FindFirstObjectByType(objectType, (FindObjectsInactive) findInactive);
+                LuauCore.WritePropertyToThread(thread, ret, typeof(Object));
+            } else {
+                var ret = Object.FindFirstObjectByType(objectType);
+                LuauCore.WritePropertyToThread(thread, ret, typeof(Object));
+            }
+
+            return 1;
+        }
+
+        if (methodName == "FindFirstAirshipObjectByType") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            if (numParameters == 2) {
+                var findObjectsInactive = (FindObjectsInactive) LuauCore.GetParameterAsInt32(1, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                return AirshipBehaviourHelper.FindFirstAirshipObjectByType(context, thread, typeName, findObjectsInactive);
+            } 
+            
+            return AirshipBehaviourHelper.FindFirstAirshipObjectByType(context, thread, typeName);
+        }
+
+        if (methodName == "FindAirshipObjectsByType") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+            if (numParameters == 3) {
+                var inactive = (FindObjectsInactive) LuauCore.GetParameterAsInt32(1,  numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                var sortMode = (FindObjectsSortMode) LuauCore.GetParameterAsInt32(2, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);
+                return AirshipBehaviourHelper.FindAirshipsObjectByType(context, thread, typeName, inactive, sortMode);    
+            } else {
+                return AirshipBehaviourHelper.FindAirshipsObjectByType(context, thread, typeName);    
+            }
+        }
         
         if (methodName == "FindObjectsByType") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, parameterDataSizes);

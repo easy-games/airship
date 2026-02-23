@@ -2,6 +2,7 @@ using System;
 using Code.Luau.LuauAssembly.Protection;
 using Luau;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 [LuauAPI]
 public class ObjectAPI : BaseLuaAPIClass {
@@ -15,6 +16,7 @@ public class ObjectAPI : BaseLuaAPIClass {
             ThreadDataManager.Error(thread);
             return 0;
         }
+
         return -1;
     }
     
