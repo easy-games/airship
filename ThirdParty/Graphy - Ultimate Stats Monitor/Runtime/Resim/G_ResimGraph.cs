@@ -35,6 +35,8 @@ namespace Tayx.Graphy.Resim {
         public Text clientSendRate;
         public Text clientRecvRate;
         public Text pingText;
+        public Text clientToServerLoss;
+        public Text serverToClientLoss;
 
         #region Variables -> Private
 
@@ -60,6 +62,8 @@ namespace Tayx.Graphy.Resim {
             this.pingText.text = $"{Math.Round(NetworkTime.rtt * 1000)}ms";
             this.clientSendRate.text = $"{Mirror.Utils.PrettyBytes(this.networkStatistics.clientSentBytesPerSecond)}/s";
             this.clientRecvRate.text = $"{Mirror.Utils.PrettyBytes(this.networkStatistics.clientReceivedBytesPerSecond)}/s";
+            this.clientToServerLoss.text = $"{Math.Round(this.networkStatistics.clientToServerLoss * 100f)}%";
+            this.serverToClientLoss.text = $"{Math.Round(this.networkStatistics.serverToClientLoss * 100f)}%";
         }
 
         #endregion

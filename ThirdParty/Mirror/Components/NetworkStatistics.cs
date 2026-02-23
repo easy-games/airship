@@ -33,6 +33,10 @@ namespace Mirror
         [HideInInspector] public int  clientSentPacketsPerSecond;
         [HideInInspector] public long clientSentBytesPerSecond;
 
+        // packet loss (0.0 to 1.0)
+        [HideInInspector] public float clientToServerLoss;
+        [HideInInspector] public float serverToClientLoss;
+
         // ---------------------------------------------------------------------
 
         // SERVER (public fields for other components to grab statistics)
@@ -50,16 +54,28 @@ namespace Mirror
         [HideInInspector] public int  serverSentPacketsPerSecond;
         [HideInInspector] public long serverSentBytesPerSecond;
 
+        private bool setupEvents = false;
+
         // NetworkManager sets Transport.active in Awake().
         // so let's hook into it in Start().
         private void Start() {
-            if (NetworkClient.isConnected) {
+            if (NetworkClient.active) {
                 this.SetupTransportEvents();
             }
+            
+            if (NetworkServer.active) {
+                this.SetupTransportEvents();
+            }
+        }
+
+        private void Awake() {
             NetworkManager.onClientSetup += this.SetupTransportEvents;
+            NetworkManager.onServerSetup += this.SetupTransportEvents;
         }
 
         private void SetupTransportEvents() {
+            if (setupEvents == true) return;
+            
             // find available transport
             Transport transport = Transport.active;
             if (transport) {
@@ -67,14 +83,14 @@ namespace Mirror
                 transport.OnClientDataSent += OnClientSend;
                 transport.OnServerDataReceived += OnServerReceive;
                 transport.OnServerDataSent += OnServerSend;
+                setupEvents = true;
             }
         }
 
-        void OnDestroy()
-        {
+        void OnDestroy() {
             // remove transport hooks
             Transport transport = Transport.active;
-            if (transport != null) {
+            if (transport != null && setupEvents) {
                 transport.OnClientDataReceived -= OnClientReceive;
                 transport.OnClientDataSent -= OnClientSend;
                 transport.OnServerDataReceived -= OnServerReceive;
@@ -82,6 +98,7 @@ namespace Mirror
             }
 
             NetworkManager.onClientSetup -= this.SetupTransportEvents;
+            NetworkManager.onServerSetup -= this.SetupTransportEvents;
         }
 
         void OnClientReceive(ArraySegment<byte> data, int channelId)
@@ -131,6 +148,9 @@ namespace Mirror
             clientIntervalReceivedBytes = 0;
             clientIntervalSentPackets = 0;
             clientIntervalSentBytes = 0;
+
+            clientToServerLoss = NetworkTime.clientToServerLoss;
+            serverToClientLoss = NetworkTime.serverToClientLoss;
         }
 
         void UpdateServer()
