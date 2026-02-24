@@ -247,10 +247,9 @@ namespace Code.Airship.Resources.Scripts {
                     Material mat = null;
                     if (i < materials.Length) {
                         mat = materials[i];
-                    }
-                    else {
+                    } else {
                         //default material
-                        mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                        mat = new Material(MeshCombiner.defaultShader);
                     }
                     subMesh.material = mat;
                 }
@@ -786,7 +785,7 @@ namespace Code.Airship.Resources.Scripts {
             for (int i = 0; i < source.subMeshes.Count; i++) {
                 SubMesh sourceMesh = source.subMeshes[i];
                 if (isClient && sourceMesh.material == null) {
-                    sourceMesh.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    sourceMesh.material = new Material(MeshCombiner.defaultShader);
                 }
 
                 //find a submesh with a matching material
@@ -937,6 +936,8 @@ namespace Code.Airship.Resources.Scripts {
 
                     results.Add(meshCopy);
                 }
+            } else {
+                Debug.LogError("No renderers found on active accessory: " + activeAccessory.AccessoryComponent.name);
             }
 
             return results;
