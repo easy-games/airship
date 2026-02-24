@@ -411,19 +411,8 @@ namespace Airship {
                         Debug.Log("Create mesh time: " + meshSt.Elapsed.TotalMilliseconds + " ms");
                     }
                 }
-
+                
                 var isClient = RunCore.IsClient();
-                
-                
-                // MaterialColorURP
-                MaterialColorURP matColor = null;
-                if (lodLevel < outputCombinedMeshMatColors.Length) {
-                    matColor = outputCombinedMeshMatColors[lodLevel];
-                }
-
-                if (matColor != null) {
-                    matColor.ForceVariableCount(finalSkinnedMeshCopy.subMeshes.Count);
-                }
                 
                 // Copy the materials to the renderer
                 Material[] finalMaterials = new Material[finalSkinnedMeshCopy.subMeshes.Count];
@@ -433,9 +422,28 @@ namespace Airship {
                     if (isClient && !finalMaterials[i].shader.isSupported) {
                         finalMaterials[i].shader = Shader.Find("Universal Render Pipeline/Lit");
                     }
-                    
-                    //assign colors to material color setter
-                    if (matColor != null) {
+                }
+
+                // Create the actual renderer
+                var outputSkinnedMeshRenderer = this.outputSkinnedMeshRenderers[lodLevel];
+                outputSkinnedMeshRenderer.sharedMaterials = finalMaterials;
+                outputSkinnedMeshRenderer.sharedMesh = mesh;
+                outputSkinnedMeshRenderer.sharedMesh.bindposes = finalSkinnedMeshCopy.bindPoses.ToArray();
+                outputSkinnedMeshRenderer.bones = finalSkinnedMeshCopy.bones.ToArray();
+                outputSkinnedMeshRenderer.rootBone = finalSkinnedMeshCopy.rootBone;
+                outputSkinnedMeshRenderer.localBounds = this.skinnedMeshBounds;
+
+                
+                // Setup material colors with MaterialColorURP
+                MaterialColorURP matColor = null;
+                if (lodLevel < outputCombinedMeshMatColors.Length) {
+                    matColor = outputCombinedMeshMatColors[lodLevel];
+                }
+                if (matColor != null) {
+                    // Force the material color to initialize with the correct amount of color slots
+                    matColor.ForceVariableCount(finalSkinnedMeshCopy.subMeshes.Count);
+                    for (int i = 0; i < finalSkinnedMeshCopy.subMeshes.Count; i++) {
+                        //assign colors to material color setter
                         if (i == 0) {
                             matColor.SetColor(0, this.skinColor);
                         } else {
@@ -444,19 +452,9 @@ namespace Airship {
                             }
                         }
                     }
-                }
-
-                if (matColor != null) {
+                    // Process the set colors
                     matColor.DoUpdate();
                 }
-
-                var outputSkinnedMeshRenderer = this.outputSkinnedMeshRenderers[lodLevel];
-                outputSkinnedMeshRenderer.sharedMaterials = finalMaterials;
-                outputSkinnedMeshRenderer.sharedMesh = mesh;
-                outputSkinnedMeshRenderer.sharedMesh.bindposes = finalSkinnedMeshCopy.bindPoses.ToArray();
-                outputSkinnedMeshRenderer.bones = finalSkinnedMeshCopy.bones.ToArray();
-                outputSkinnedMeshRenderer.rootBone = finalSkinnedMeshCopy.rootBone;
-                outputSkinnedMeshRenderer.localBounds = this.skinnedMeshBounds;
 
                 // if (lodLevel >= this.outputCombinedMeshMatColors.Length){
                 //     continue;
@@ -516,10 +514,12 @@ namespace Airship {
             foreach (var lodSourceReferences in this.sourceReferences) {
                 foreach (MeshCopyReference reference in lodSourceReferences) {
                     if (reference.activeAccessory != null) {
+                        // Debug.Log("Loading activeAccessory: " + reference.activeAccessory.AccessoryComponent.name);
                         stAccessories.Start();
                         stBase.Stop();
                         reference.LoadMeshCopiesByAccessory();
                     } else {
+                        // Debug.Log("Loading base mesh: " + reference.name);
                         stAccessories.Stop();
                         stBase.Start();
                         reference.LoadMeshCopiesAsBaseMesh();
