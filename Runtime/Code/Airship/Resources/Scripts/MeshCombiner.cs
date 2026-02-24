@@ -38,6 +38,8 @@ namespace Airship {
         private static bool debugText = false;
         private static bool useCache = false;
 
+        public static Shader defaultShader;
+
         [SerializeField] public List<SkinnedMeshRenderer> outputSkinnedMeshRenderers;
 
         [FormerlySerializedAs("outputBaseMeshMatColors")]
@@ -90,6 +92,7 @@ namespace Airship {
         }
 
         private void Awake() {
+            defaultShader = Shader.Find("Universal Render Pipeline/Lit");
             // If serialization broke on this or a prefab override removed them grab any existing material color setters
             if (outputCombinedMeshMatColors == null || outputCombinedMeshMatColors.Length <= 0) {
                 Debug.LogWarning("Missing Material Color references on MeshCombiner. You may need to assign the MaterialColorURP assets on your Character Variant's MeshCombiner.");
