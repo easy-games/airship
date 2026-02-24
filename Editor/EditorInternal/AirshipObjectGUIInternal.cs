@@ -50,11 +50,7 @@ internal static class AirshipObjectGUIInternal {
         {
             var actualObject = obj;
             var menu = new GenericMenu();
-            
-            // if (EditorGUI.FillPropertyContextMenu(null, menu: menu) != null) {
-            //     menu.AddSeparator("");
-            // }
-            
+
             menu.AddItem(new GUIContent("Properties..."), false, () => PropertyEditor.OpenPropertyEditor(actualObject));
             menu.DropDown(position);
             Event.current.Use();
@@ -164,6 +160,16 @@ internal static class AirshipObjectGUIInternal {
     }
 
     public static GUIStyle objectFieldButtonStyle => EditorStyles.objectFieldButton;
+
+    public static Object GetTargetObjectType(Object obj, Type type) {
+        if (obj is Component co) return co;
+        if (obj is not GameObject go) return null;
+        if (typeof(Component).IsAssignableFrom(type)) {
+            return go.GetComponent(type);
+        }
+
+        return go;
+    }
     
     public static Object DoObjectField(
         Rect position,
@@ -200,12 +206,13 @@ internal static class AirshipObjectGUIInternal {
         switch (Event.current.type) {
             case EventType.ExecuteCommand: {
                 if (commandName == "ObjectSelectorUpdated" && ObjectSelector.get.objectSelectorID == controlId) {
-                    return ObjectSelector.GetCurrentObject();
+                    obj = GetTargetObjectType(ObjectSelector.GetCurrentObject(), objType);
+                    return obj;
                 }
                 if (commandName == "ObjectSelectorClosed" && ObjectSelector.get.objectSelectorID == controlId)
                 {
                     if (ObjectSelector.get.GetInstanceID() != 0)
-                        return ObjectSelector.GetCurrentObject();
+                        return GetTargetObjectType(ObjectSelector.GetCurrentObject(), objType);
                     current.Use();
                 }
                 if ((current.commandName == "Delete" || current.commandName == "SoftDelete") &&
