@@ -1455,7 +1455,7 @@ public partial class LuauCore : MonoBehaviour {
             if (eventInfo == null)
             {
                 string firstLetter = methodName.Substring(2, 1);
-                string name = firstLetter.ToLower() + methodName.Substring(3);
+                string name = firstLetter.ToLowerInvariant() + methodName.Substring(3);
                 eventInfo = type.GetRuntimeEvent(name);
             }
 

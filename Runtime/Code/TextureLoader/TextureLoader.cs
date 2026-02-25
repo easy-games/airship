@@ -89,7 +89,7 @@ namespace TextureLoaderUtil
                 return null;
 
             var textureBytes = File.ReadAllBytes(fn);
-            string ext = Path.GetExtension(fn).ToLower();
+            string ext = Path.GetExtension(fn).ToLowerInvariant();
             string name = Path.GetFileName(fn);
             Texture2D returnTex = null;
 

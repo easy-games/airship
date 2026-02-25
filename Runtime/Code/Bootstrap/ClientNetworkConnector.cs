@@ -27,8 +27,8 @@ public class ClientNetworkConnector : MonoBehaviour {
 #if UNITY_EDITOR
             var tags = CurrentPlayer.ReadOnlyTags();
             foreach (var tag in tags) {
-                if (tag.ToLower().StartsWith("latejoin:")) {
-                    var split = tag.ToLower().Split("latejoin:");
+                if (tag.ToLowerInvariant().StartsWith("latejoin:")) {
+                    var split = tag.ToLowerInvariant().Split("latejoin:");
                     if (split.Length == 2) {
                         var num = int.Parse(split[1]);
                         Debug.Log($"[Airship]: Delaying join by {num} seconds. This is due to having the {tag} MPPM tag.");

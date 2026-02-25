@@ -426,8 +426,8 @@ namespace Luau {
                 return result;
             }
 
-            var childPathNormalized = StripAssetPrefix(childPath).ToLower();
-            var parentPathNormalized = StripAssetPrefix(parentPath).ToLower();
+            var childPathNormalized = StripAssetPrefix(childPath).ToLowerInvariant();
+            var parentPathNormalized = StripAssetPrefix(parentPath).ToLowerInvariant();
 
             if (childPathNormalized == parentPathNormalized) {
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
@@ -444,7 +444,7 @@ namespace Luau {
                 return false;
             }
             
-            var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPathNormalized);
+            var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLowerInvariant()).Contains(childPathNormalized);
 
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
             inheritanceCheckCache.Add((childPath, parentPath), isExtending);

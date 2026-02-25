@@ -91,7 +91,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
         }
         
         if (!Path.HasExtension(scriptPath)) scriptPath += ".lua";
-        var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(scriptPath.ToLower());
+        var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(scriptPath.ToLowerInvariant());
         
         if (runtimeScript == null) {
             throw new ArgumentException($"{scriptPath} is not a valid script path", nameof(scriptPath));
@@ -145,7 +145,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
             metadata = _createInstanceData.metadata;
         } else {
             // Grab the script from code.zip at runtime
-            var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(luaFilePath.ToLower());
+            var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(luaFilePath.ToLowerInvariant());
             if (runtimeScript) {
                 script = runtimeScript;
             }
@@ -156,7 +156,7 @@ public class AirshipScriptableObject : ScriptableObject, ISerializationCallbackR
                     Debug.LogError($"Could not find compiled script from asset bundle '{_scriptPath}' for ScriptableObject {name} (Missing Script Asset) - {suggestion}", this);
                 }
                 else {
-                    Debug.LogError($"Could not find compiled script in code archive '{_script.m_path.ToLower()}' for ScriptableObject {name} (Missing Runtime Script Code)", this);
+                    Debug.LogError($"Could not find compiled script in code archive '{_script.m_path.ToLowerInvariant()}' for ScriptableObject {name} (Missing Runtime Script Code)", this);
                 }
                 return;
             }

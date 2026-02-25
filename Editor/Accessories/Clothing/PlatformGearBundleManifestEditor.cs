@@ -334,8 +334,8 @@ namespace Editor.Accessories.Clothing {
             var assetGuids = AssetDatabase.FindAssets("*", new string[] {sourceFolderPath}).ToList();
             var assetPaths = assetGuids
                 .Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
-                .Where((path) => !path.ToLower().Contains("editor/"))
-                .Where((path) => !path.ToLower().Contains("exclude/"))
+                .Where((path) => !path.ToLowerInvariant().Contains("editor/"))
+                .Where((path) => !path.ToLowerInvariant().Contains("exclude/"))
                 .Where((p) => !AssetDatabase.IsValidFolder(p))
                 .ToArray();
             Debug.Log("Resources:");
@@ -343,7 +343,7 @@ namespace Editor.Accessories.Clothing {
                 Debug.Log("  - " + path);
             }
             var addressableNames = assetPaths
-                .Select((p) => p.ToLower())
+                .Select((p) => p.ToLowerInvariant())
                 .Select((p) => {
                     if (p.Contains("gear bundle manifest")) {
                         // strip the path so it's easier to load later
