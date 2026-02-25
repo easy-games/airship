@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Code.Accessories.Clothing;
+using Code.Authentication;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Platform.Shared;
@@ -16,6 +17,7 @@ using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
@@ -68,234 +70,237 @@ namespace Editor.Accessories.Clothing {
             GUILayout.Space(20);
 
             if (GUILayout.Button("Publish")) {
-                this.BuildAllPlatforms();
+                Debug.Log("Publishing");
+                BuildAllPlatforms();
             }
 
             GUILayout.Space(10);
-            this.skipBuild = EditorGUILayout.Toggle("Skip Build", this.skipBuild);
+            skipBuild = EditorGUILayout.Toggle("Skip Build", this.skipBuild);
         }
 
         public async Task BuildAllPlatforms() {
-            var st = Stopwatch.StartNew();
-
-            if (!AirshipPackagesWindow.VerifyBuildModules(true)) {
+            if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
+                Debug.LogError("Must sign in to build and upload asset bundles");
                 return;
             }
 
-            bool success = true;
-
-            List<AirshipPlatform> platforms = new();
-            platforms.AddRange(AirshipPlatformUtil.livePlatforms);
-            // platforms.Add(AirshipPlatform.Mac); // debug
-
-            // ********************************* //
-            var manifest = (PlatformGearBundleManifest)this.target;
-
-            (string category, string subcategory) GetGearCategory(PlatformGear gear) {
-                string category = "Clothing";
-                string subcategory = "";
-                if (gear.accessoryPrefabs.Length > 0) {
-                    subcategory = gear.accessoryPrefabs[0].accessorySlot.ToString();
-                } else if (gear.face != null) {
-                    category = "FaceDecal";
-                    subcategory = "None";
-                }
-
-                return (category, subcategory);
+            if (SceneManager.GetActiveScene().isDirty) {
+                Debug.LogError("Must save current scene before building");
+                return;
             }
 
-            // Pre-build check: Make sure all gear accessory LOD's are in the right folder
-            foreach (var gear in manifest.gearList) {
-                if (gear.accessoryPrefabs != null) {
-                    foreach (var accessory in gear.accessoryPrefabs) {
-                        foreach (var mesh in accessory.meshLods) {
-                            var path = AssetDatabase.GetAssetPath(mesh);
-                            if (!path.StartsWith("Assets/Gear")) {
-                                Debug.LogError($"{accessory.gameObject.name} has an LOD mesh outside of the gear folder. Place all assets (including LOD meshes) inside of the gear folder. Invalid mesh path: " + path);
-                                return;
+            if (!AirshipPackagesWindow.VerifyBuildModules(true)) {
+                Debug.LogError("ERROR Missing Modules");
+                return;
+            }
+
+            var st = Stopwatch.StartNew();
+            Debug.Log("Build All Platforms Started");
+            try {
+                List<AirshipPlatform> platforms = new();
+                platforms.AddRange(AirshipPlatformUtil.livePlatforms);
+                // platforms.Add(AirshipPlatform.Mac); // debug
+
+                // ********************************* //
+                var manifest = (PlatformGearBundleManifest)this.target;
+
+                (string category, string subcategory) GetGearCategory(PlatformGear gear) {
+                    string category = "Clothing";
+                    string subcategory = "";
+                    if (gear.accessoryPrefabs.Length > 0) {
+                        subcategory = gear.accessoryPrefabs[0].accessorySlot.ToString();
+                    } else if (gear.face != null) {
+                        category = "FaceDecal";
+                        subcategory = "None";
+                    }
+
+                    return (category, subcategory);
+                }
+
+                // Pre-build check: Make sure all gear accessory LOD's are in the right folder
+                foreach (var gear in manifest.gearList) {
+                    if (gear.accessoryPrefabs != null) {
+                        foreach (var accessory in gear.accessoryPrefabs) {
+                            foreach (var mesh in accessory.meshLods) {
+                                var path = AssetDatabase.GetAssetPath(mesh);
+                                if (!path.StartsWith("Assets/Gear")) {
+                                    Debug.LogError($"{accessory.gameObject.name} has an LOD mesh outside of the gear folder. Place all assets (including LOD meshes) inside of the gear folder. Invalid mesh path: " + path);
+                                    return;
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (!CreateAssetBundles.PrePublishChecks()) return;
+                if (!CreateAssetBundles.PrePublishChecks()) return;
 
 
-            // Create Class ID's for each gear piece
-            foreach (var gear in manifest.gearList) {
-                if (!string.IsNullOrEmpty(gear.classId)) continue;
+                // Create Class ID's for each gear piece
+                foreach (var gear in manifest.gearList) {
+                    if (!string.IsNullOrEmpty(gear.classId)) continue;
 
-                // Grab class id from the old accessory.classId
-                if (gear.accessoryPrefabs.Length > 0 &&
-                    !string.IsNullOrEmpty(gear.accessoryPrefabs[0].serverClassId)) {
-                    gear.classId = gear.accessoryPrefabs[0].serverClassId;
-                    EditorUtility.SetDirty(gear);
-                    AssetDatabase.SaveAssets();
-                    continue;
-                }
-                if (gear.face != null && !string.IsNullOrEmpty(gear.face.serverClassId)) {
-                    gear.classId = gear.face.serverClassId;
-                    EditorUtility.SetDirty(gear);
-                    AssetDatabase.SaveAssets();
-                    continue;
-                }
-
-                (string category, string subcategory) = GetGearCategory(gear);
-
-                // Create a new class id
-                var data = JsonUtility.ToJson(new GearCreateRequest() {
-                    name = gear.name,
-                    imageId = defaultImageId,
-                    description = "Clothing",
-                    airAssets = new string[] { },
-                    category = category,
-                    subcategory = subcategory,
-                });
-                var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}", data, "application/json");
-                req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
-                req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
-                await req.SendWebRequest();
-                if (req.result != UnityWebRequest.Result.Success) {
-                    Debug.Log("Post request: " + data);
-                    Debug.LogError("Failed to create gear class: " + req.downloadHandler.text);
-                    return;
-                }
-                Debug.Log("Create classId response: " + req.downloadHandler.text);
-                var createResponse = JsonUtility.FromJson<GearCreateResponse>(req.downloadHandler.text);
-                gear.classId = createResponse.classId;
-                EditorUtility.SetDirty(gear);
-                AssetDatabase.SaveAssets();
-            }
-
-            string airId = manifest.airId;
-
-            var contentName = manifest.gearList[0].name;
-            var contentDescription = "Clothing";
-
-            if (string.IsNullOrEmpty(airId)) {
-                // Create new air asset
-                var req = UnityWebRequest.PostWwwForm(
-                    AirshipPlatformUrl.deploymentService + $"/air-assets/owner-type/ORGANIZATION/owner-id/{easyOrgId}",
-                    JsonUtility.ToJson(new AirAssetCreateRequest() {
-                        contentType = "application/airasset",
-                        contentLength = 1,
-                        name = contentName,
-                        description = contentDescription,
-                        platforms = platforms.Select((p) => AirshipPlatformUtil.GetStringName(p)).ToArray(),
-                    }));
-                req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
-                await req.SendWebRequest();
-                Debug.Log("create response: " + req.downloadHandler.text);
-                var data = JsonUtility.FromJson<AirAssetCreateResponse>(req.downloadHandler.text);
-                manifest.airId = data.airAssetId;
-                EditorUtility.SetDirty(this.target);
-                this.SaveChanges();
-                airId = data.airAssetId;
-            }
-
-            List<string> bundlePaths = new();
-            foreach (var platform in platforms) {
-                var path = await this.BuildPlatform(platform, airId);
-                if (string.IsNullOrEmpty(path)) {
-                    success = false;
-                    return;
-                }
-
-                bundlePaths.Add(path);
-            }
-            // {
-            //     var path = await this.BuildPlatform(AirshipPlatform.Windows, airId);
-            //     if (string.IsNullOrEmpty(path)) {
-            //         success = false;
-            //         return;
-            //     }
-            //
-            //     bundlePaths.Add(path);
-            // }
-
-            if (!success) return;
-
-            // ******************** //
-
-            int bytesCount = 0;
-            for (int i = 0; i < platforms.Count; i++) {
-                var platform = platforms[i];
-                var buildOutputFile = bundlePaths[i];
-                // var buildOutputFile = bundlePaths[0];
-
-                // Update air asset
-                var bytes = await File.ReadAllBytesAsync(buildOutputFile);
-                Debug.Log("bytes length: " + bytes.Length + ", path: " + buildOutputFile);
-                bytesCount = bytes.Length;
-                var updateReq = UnityWebRequest.Put(AirshipPlatformUrl.deploymentService + $"/air-assets/{airId}",
-                    JsonUtility.ToJson(new AirAssetCreateRequest() {
-                        contentType = "application/airasset",
-                        contentLength = bytes.Length,
-                        name = contentName,
-                        description = contentDescription,
-                        platforms = platforms.Select((p) => AirshipPlatformUtil.GetStringName(p)).ToArray(),
-                    }));
-                updateReq.SetRequestHeader("Content-Type", "application/json");
-                updateReq.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
-                updateReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
-                await updateReq.SendWebRequest();
-                if (updateReq.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError("Failed to update air asset: " + updateReq.downloadHandler.text);
-                    EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
-                    return;
-                }
-                var updateData = JsonUtility.FromJson<AirAssetCreateResponse>(updateReq.downloadHandler.text);
-                var uploadUrl = updateData.urls.UrlFromPlatform(platform);
-
-                // Upload asset bundle
-                {
-                    UnityWebRequest putReq = UnityWebRequest.Put(uploadUrl, bytes);
-                    foreach (var pair in updateData.headers) {
-                        putReq.SetRequestHeader(pair.key, pair.value);
+                    // Grab class id from the old accessory.classId
+                    if (gear.accessoryPrefabs.Length > 0 &&
+                        !string.IsNullOrEmpty(gear.accessoryPrefabs[0].serverClassId)) {
+                        gear.classId = gear.accessoryPrefabs[0].serverClassId;
+                        EditorUtility.SetDirty(gear);
+                        AssetDatabase.SaveAssets();
+                        continue;
                     }
-                    putReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
+                    if (gear.face != null && !string.IsNullOrEmpty(gear.face.serverClassId)) {
+                        gear.classId = gear.face.serverClassId;
+                        EditorUtility.SetDirty(gear);
+                        AssetDatabase.SaveAssets();
+                        continue;
+                    }
 
-                    Debug.Log("Uploading asset bundle...");
-                    await putReq.SendWebRequest();
-                    Debug.Log("Finished upload! Updating gear classes...");
+                    (string category, string subcategory) = GetGearCategory(gear);
 
-                    if (putReq.result != UnityWebRequest.Result.Success) {
-                        Debug.LogError(putReq.error);
-                        Debug.LogError(putReq.downloadHandler.text);
+                    // Create a new class id
+                    var data = JsonUtility.ToJson(new GearCreateRequest() {
+                        name = gear.name,
+                        imageId = defaultImageId,
+                        description = "Clothing",
+                        airAssets = new string[] { },
+                        category = category,
+                        subcategory = subcategory,
+                    });
+                    var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}", data, "application/json");
+                    req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                    req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
+                    await req.SendWebRequest();
+                    if (req.result != UnityWebRequest.Result.Success) {
+                        Debug.Log("Post request: " + data);
+                        Debug.LogError("Failed to create gear class: " + req.downloadHandler.text);
+                        return;
+                    }
+                    Debug.Log("Create classId response: " + req.downloadHandler.text);
+                    var createResponse = JsonUtility.FromJson<GearCreateResponse>(req.downloadHandler.text);
+                    gear.classId = createResponse.classId;
+                    EditorUtility.SetDirty(gear);
+                    AssetDatabase.SaveAssets();
+                }
+
+                string airId = manifest.airId;
+
+                var contentName = manifest.gearList[0].name;
+                var contentDescription = "Clothing";
+
+                if (string.IsNullOrEmpty(airId)) {
+                    // Create new air asset
+                    var req = UnityWebRequest.PostWwwForm(
+                        AirshipPlatformUrl.deploymentService + $"/air-assets/owner-type/ORGANIZATION/owner-id/{easyOrgId}",
+                        JsonUtility.ToJson(new AirAssetCreateRequest() {
+                            contentType = "application/airasset",
+                            contentLength = 1,
+                            name = contentName,
+                            description = contentDescription,
+                            platforms = platforms.Select((p) => AirshipPlatformUtil.GetStringName(p)).ToArray(),
+                        }));
+                    req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                    await req.SendWebRequest();
+                    Debug.Log("create response: " + req.downloadHandler.text);
+                    var data = JsonUtility.FromJson<AirAssetCreateResponse>(req.downloadHandler.text);
+                    manifest.airId = data.airAssetId;
+                    EditorUtility.SetDirty(this.target);
+                    this.SaveChanges();
+                    airId = data.airAssetId;
+                }
+
+                List<string> bundlePaths = new();
+                foreach (var platform in platforms) {
+                    var path = await this.BuildPlatform(platform, airId);
+                    if (string.IsNullOrEmpty(path)) {
+                        Debug.LogError("Unable to build platform: " + platform);
+                        return;
+                    }
+
+                    bundlePaths.Add(path);
+                }
+
+                int bytesCount = 0;
+                for (int i = 0; i < platforms.Count; i++) {
+                    var platform = platforms[i];
+                    var buildOutputFile = bundlePaths[i];
+                    // var buildOutputFile = bundlePaths[0];
+
+                    // Update air asset
+                    var bytes = await File.ReadAllBytesAsync(buildOutputFile);
+                    Debug.Log("bytes length: " + bytes.Length + ", path: " + buildOutputFile);
+                    bytesCount = bytes.Length;
+                    var updateReq = UnityWebRequest.Put(AirshipPlatformUrl.deploymentService + $"/air-assets/{airId}",
+                        JsonUtility.ToJson(new AirAssetCreateRequest() {
+                            contentType = "application/airasset",
+                            contentLength = bytes.Length,
+                            name = contentName,
+                            description = contentDescription,
+                            platforms = platforms.Select((p) => AirshipPlatformUtil.GetStringName(p)).ToArray(),
+                        }));
+                    updateReq.SetRequestHeader("Content-Type", "application/json");
+                    updateReq.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                    updateReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
+                    await updateReq.SendWebRequest();
+                    if (updateReq.result != UnityWebRequest.Result.Success) {
+                        Debug.LogError("Failed to update air asset: " + updateReq.downloadHandler.text);
+                        EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
+                        return;
+                    }
+                    var updateData = JsonUtility.FromJson<AirAssetCreateResponse>(updateReq.downloadHandler.text);
+                    var uploadUrl = updateData.urls.UrlFromPlatform(platform);
+
+                    // Upload asset bundle
+                    {
+                        UnityWebRequest putReq = UnityWebRequest.Put(uploadUrl, bytes);
+                        foreach (var pair in updateData.headers) {
+                            putReq.SetRequestHeader(pair.key, pair.value);
+                        }
+                        putReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
+
+                        Debug.Log("Uploading asset bundle");
+                        await putReq.SendWebRequest();
+
+                        if (putReq.result != UnityWebRequest.Result.Success) {
+                            Debug.LogError(putReq.error);
+                            Debug.LogError(putReq.downloadHandler.text);
+                            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
+                            return;
+                        }
+                    }
+                }
+
+                // ******************** //
+                // Update all ClassID's to point to the airId
+                foreach (var gear in manifest.gearList) {
+                    (string category, string subcategory) = GetGearCategory(gear);
+                    var data = new GearPatchRequest() {
+                        airAssets = new string[] { airId },
+                        category = category,
+                        subcategory = subcategory,
+                    };
+                    var url = $"{AirshipPlatformUrl.contentService}/gear/class-id/{gear.classId}";
+                    var req = UnityWebRequest.Put(url,
+                        JsonUtility.ToJson(data));
+                    req.method = "PATCH";
+                    req.SetRequestHeader("Content-Type","application/json");
+                    req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                    req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
+                    await req.SendWebRequest();
+                    if (req.result != UnityWebRequest.Result.Success) {
+                        Debug.LogError($"patch classId. url: {url}, response: {req.downloadHandler.text}, authToken: {InternalHttpManager.editorAuthToken}");
                         EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                         return;
                     }
                 }
-            }
 
-            // ******************** //
-            // Update all ClassID's to point to the airId
-            foreach (var gear in manifest.gearList) {
-                (string category, string subcategory) = GetGearCategory(gear);
-                var data = new GearPatchRequest() {
-                    airAssets = new string[] { airId },
-                    category = category,
-                    subcategory = subcategory,
-                };
-                var url = $"{AirshipPlatformUrl.contentService}/gear/class-id/{gear.classId}";
-                var req = UnityWebRequest.Put(url,
-                    JsonUtility.ToJson(data));
-                req.method = "PATCH";
-                req.SetRequestHeader("Content-Type","application/json");
-                req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
-                req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
-                await req.SendWebRequest();
-                if (req.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError($"patch classId. url: {url}, response: {req.downloadHandler.text}, authToken: {InternalHttpManager.editorAuthToken}");
+                if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneWindows) {
                     EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
-                    return;
                 }
+                
+                Debug.Log($"<color=green>Finished building {bundlePaths.Count} asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color> File size: " + AirshipEditorUtil.GetFileSizeText(bytesCount));
+            } catch (Exception e) {
+                Debug.LogError("ERROR: " + e.Message);
             }
 
-            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
-
-            Debug.Log($"<color=green>Finished building {bundlePaths.Count} asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color> File size: " + AirshipEditorUtil.GetFileSizeText(bytesCount));
         }
 
         /// <summary>
@@ -349,7 +354,10 @@ namespace Editor.Accessories.Clothing {
                 if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
                     buildTargetGroup = BuildTargetGroup.Standalone;
                 }
-                EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, buildTarget);
+
+                if (EditorUserBuildSettings.activeBuildTarget != buildTarget) {
+                    EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, buildTarget);
+                }
                 var buildParams = new BundleBuildParameters(
                     buildTarget,
                     buildTargetGroup,
