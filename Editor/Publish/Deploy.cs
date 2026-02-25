@@ -279,7 +279,7 @@ public class Deploy {
 			
 			// var airshipBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
 			// foreach (var guid in airshipBuildInfoGuids) {
-			// 	var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+			// 	var path = AssetDatabase.GUIDToAssetPath(guid).ToLowerInvariant();
 			// 	paths.Add(path);
 			// }
 

@@ -16,8 +16,8 @@ public class LoadedAssetBundle {
 	public string assetBundleFile;
 	public LoadedAssetBundle(AirshipPackage airshipPackage, string bundleFolder, AssetBundle assetBundle) {
 		this.airshipPackage = airshipPackage;
-		this.bundleId = this.airshipPackage.id.ToLower();
-		this.assetBundleFile = bundleFolder.ToLower();
+		this.bundleId = this.airshipPackage.id.ToLowerInvariant();
+		this.assetBundleFile = bundleFolder.ToLowerInvariant();
 		this.assetBundle = assetBundle;
 	}
 }

@@ -146,7 +146,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 						}
 						codeZipUrl = gameCodeZipUrl;
 					} else {
-						codeZipUrl = $"{cdnUrl}/package/{package.id.ToLower()}/code/{package.codeVersion}/code.zip";
+						codeZipUrl = $"{cdnUrl}/package/{package.id.ToLowerInvariant()}/code/{package.codeVersion}/code.zip";
 					}
 
 					if (File.Exists(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"))) {
