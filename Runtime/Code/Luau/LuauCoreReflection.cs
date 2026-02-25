@@ -1006,6 +1006,28 @@ public partial class LuauCore : MonoBehaviour
                 
                 return true;
             }
+            case PODTYPE.POD_MATRIX: {
+                LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_MATRIX, size * 16, idx, out var arr, arrayAsList);
+
+                IList<Matrix4x4> matrices = arrayAsList ? new List<Matrix4x4>(size) : new Matrix4x4[size];
+                for (var i = 0; i < size; i++) {
+                    var j = i * 16;
+                    var item = new Matrix4x4(
+                        new Vector4(arr[j], arr[j + 1], arr[j + 2], arr[j + 3]),
+                        new Vector4(arr[j + 4], arr[j + 5], arr[j + 6], arr[j + 7]),
+                        new Vector4(arr[j + 8], arr[j + 9], arr[j + 10], arr[j + 11]),
+                        new Vector4(arr[j + 12], arr[j + 13], arr[j + 14], arr[j + 15])
+                    );
+                    if (arrayAsList) {
+                        matrices.Add(item);
+                    } else {
+                        matrices[i] = item;
+                    }
+                }
+                value = matrices;
+
+                return true;
+            }
             case PODTYPE.POD_OBJECT: {
                 LuauPlugin.CopyTableToArray<int>(thread, PODTYPE.POD_OBJECT, size, idx, out var arr, false);
 
