@@ -188,7 +188,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IAirshipRuntime
 		
 #if !UNITY_EDITOR || AIRSHIP_PLAYER
 		// Grab the script from code.zip at runtime
-		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(LuaFilePath.ToLower());
+		var runtimeScript = LuauScript.AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(LuaFilePath.ToLowerInvariant());
 		if (runtimeScript) {
 			script = runtimeScript;
 		}
@@ -199,7 +199,7 @@ public class AirshipComponent : MonoBehaviour, ITriggerReceiver, IAirshipRuntime
 				Debug.LogError($"Could not find compiled script from asset bundle '{scriptPath}' for GameObject {gameObject.name} (Missing Script Asset) - {suggestion}", gameObject);
 			}
 			else {
-				Debug.LogError($"Could not find compiled script in code archive '{script.m_path.ToLower()}' for GameObject {gameObject.name} (Missing Runtime Script Code)", gameObject);
+				Debug.LogError($"Could not find compiled script in code archive '{script.m_path.ToLowerInvariant()}' for GameObject {gameObject.name} (Missing Runtime Script Code)", gameObject);
 			}
 			return;
 		}
