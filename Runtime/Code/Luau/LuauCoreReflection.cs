@@ -1028,6 +1028,23 @@ public partial class LuauCore : MonoBehaviour
 
                 return true;
             }
+            case PODTYPE.POD_RAY: {
+                LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_RAY, size * 6, idx, out var arr, arrayAsList);
+
+                IList<Ray> rays = arrayAsList ? new List<Ray>(size) : new Ray[size];
+                for (var i = 0; i < size; i++) {
+                    var j = i * 4;
+                    var item = new Ray(new Vector3(arr[j], arr[j + 1], arr[j + 2]), new Vector3(arr[j + 3], arr[j + 4], arr[j + 5]));
+                    if (arrayAsList) {
+                        rays.Add(item);
+                    } else {
+                        rays[i] = item;
+                    }
+                }
+                value = rays;
+
+                return true;
+            }
             case PODTYPE.POD_OBJECT: {
                 LuauPlugin.CopyTableToArray<int>(thread, PODTYPE.POD_OBJECT, size, idx, out var arr, false);
 
