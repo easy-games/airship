@@ -1062,6 +1062,23 @@ public partial class LuauCore : MonoBehaviour
 
                 return true;
             }
+            case PODTYPE.POD_QUATERNION: {
+                LuauPlugin.CopyTableToArray<float>(thread, PODTYPE.POD_QUATERNION, size * 4, idx, out var arr, arrayAsList);
+
+                IList<Quaternion> quaternions = arrayAsList ? new List<Quaternion>(size) : new Quaternion[size];
+                for (var i = 0; i < size; i++) {
+                    var j = i * 4;
+                    var item = new Quaternion(arr[j], arr[j + 1], arr[j + 2], arr[j + 3]);
+                    if (arrayAsList) {
+                        quaternions.Add(item);
+                    } else {
+                        quaternions[i] = item;
+                    }
+                }
+                value = quaternions;
+
+                return true;
+            }
             case PODTYPE.POD_OBJECT: {
                 LuauPlugin.CopyTableToArray<int>(thread, PODTYPE.POD_OBJECT, size, idx, out var arr, false);
 
