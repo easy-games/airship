@@ -124,6 +124,11 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
 				Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
 
+				if (File.Exists(path)) {
+					Debug.Log("Bundle path already exists. Deleting...");
+					File.Delete(path);
+				}
+
 				request.downloadHandler = new DownloadHandlerFile(path);
 
 				if (loadingScreen != null) {
