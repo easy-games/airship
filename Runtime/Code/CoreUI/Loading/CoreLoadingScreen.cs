@@ -165,11 +165,24 @@ public class CoreLoadingScreen : BundleLoadingScreen
     }
     
     public override void SetError(string msg) {
-        this.spinner.SetActive(false);
-        this.progressText.gameObject.SetActive(false);
-        this.bottomCard.gameObject.SetActive(false);
-        this.errorText.text = msg;
-        this.errorWrapper.gameObject.SetActive(true);
+        // We have a longstanding error about these being undefined.
+        // So I'm wrapping in if checks for now to try and learn something new...
+        // - Luke
+        if (this.spinner) {
+            this.spinner.SetActive(false);
+        }
+        if (this.progressText) {
+            this.progressText.gameObject.SetActive(false);
+        }
+        if (this.bottomCard) {
+            this.bottomCard.gameObject.SetActive(false);
+        }
+        if (this.errorText) {
+            this.errorText.text = msg;
+        }
+        if (this.errorWrapper) {
+            this.errorWrapper.gameObject.SetActive(true);
+        }
     }
     
     public void RetryBtn_OnClick() {
