@@ -279,6 +279,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CanvasDistanceManager),
             // typeof(AccessorySkin),
             typeof(AccessoryComponent),
+            typeof(AccessoryFaceComponent),
             typeof(ActiveAccessory),
             typeof(VisualGraphComponent),
             typeof(CharacterMovementSettings),
@@ -293,6 +294,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyTransformAnchor),
             typeof(EasyAxis),
             typeof(WorldSpaceCanvasScaler),
+            typeof(AccessoryFaceAudioReader),
             
             typeof(VibrationManager),
             typeof(VibrationFeedbackType),
