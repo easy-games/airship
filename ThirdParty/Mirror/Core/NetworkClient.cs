@@ -516,7 +516,10 @@ namespace Mirror
             {
                 RegisterHandler<ObjectDestroyMessage>(OnObjectDestroy);
                 RegisterHandler<ObjectHideMessage>(OnObjectHide);
+                // Client will receive pong from old servers or pongV2 from new servers.
                 RegisterHandler<NetworkPongMessage>(NetworkTime.OnClientPong, false);
+                RegisterHandler<NetworkPongMessageV2>(NetworkTime.OnClientPongV2, false);
+                // Both old and new servers will send nonV2 NetworkPingMessage until all clients have updated.
                 RegisterHandler<NetworkPingMessage>(NetworkTime.OnClientPing, false);
                 RegisterHandler<SpawnMessage>(OnSpawn);
                 RegisterHandler<ObjectSpawnStartedMessage>(OnObjectSpawnStarted);

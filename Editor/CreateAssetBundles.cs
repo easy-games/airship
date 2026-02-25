@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Code.Bootstrap;
 using Editor.Packages;
 using Editor.Publish.Callback;
@@ -31,6 +32,211 @@ public static class CreateAssetBundles {
 			}
 		}
 		return true;
+	}
+
+	private static void LogPublishedShaderUsage(List<AssetBundleBuild> builds, AirshipPlatform platform) {
+		var reportPath = GetShaderUsageReportPath();
+		if (builds == null) {
+			var emptyMessage = $"[Airship] Shader usage report ({platform}): no build inputs.\nReport file: {reportPath}";
+			WriteShaderUsageReportToFile(reportPath, emptyMessage);
+			Debug.Log(emptyMessage);
+			return;
+		}
+
+		// Only include actual game bundle content. Package bundles (including synthetic CoreMaterials
+		// reference bundles) are intentionally excluded from this report.
+		var gameBuilds = builds.Where((b) => IsGameBundleName(b.assetBundleName)).ToList();
+		if (gameBuilds.Count == 0) {
+			var noInputMessage = $"[Airship] Shader usage report ({platform}): no game bundle inputs found.\nReport file: {reportPath}";
+			WriteShaderUsageReportToFile(reportPath, noInputMessage);
+			Debug.Log(noInputMessage);
+			return;
+		}
+
+		var publishedAssetPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var build in gameBuilds) {
+			if (build.assetNames == null) {
+				continue;
+			}
+
+			foreach (var assetPath in build.assetNames) {
+				if (!string.IsNullOrEmpty(assetPath)) {
+					publishedAssetPaths.Add(assetPath);
+				}
+			}
+		}
+
+		if (publishedAssetPaths.Count == 0) {
+			var emptyBundlesMessage = $"[Airship] Shader usage report ({platform}): game bundles are empty.\nReport file: {reportPath}";
+			WriteShaderUsageReportToFile(reportPath, emptyBundlesMessage);
+			Debug.Log(emptyBundlesMessage);
+			return;
+		}
+
+		var materialPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		var dependencyPaths = AssetDatabase.GetDependencies(publishedAssetPaths.ToArray(), true);
+		foreach (var depPath in dependencyPaths) {
+			if (depPath.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)
+			    && depPath.IndexOf("/Editor/", StringComparison.OrdinalIgnoreCase) < 0) {
+				materialPaths.Add(depPath);
+			}
+		}
+
+		var byShader = new Dictionary<string, ShaderUsageInfo>(StringComparer.Ordinal);
+		foreach (var materialPath in materialPaths) {
+			var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+			if (material == null || material.shader == null) {
+				continue;
+			}
+
+			var shader = material.shader;
+			var shaderPath = AssetDatabase.GetAssetPath(shader);
+			if (string.IsNullOrEmpty(shaderPath)) {
+				shaderPath = "<builtin>";
+			}
+
+			var normalizedKeywords = (material.shaderKeywords ?? Array.Empty<string>())
+				.Where((kw) => !string.IsNullOrWhiteSpace(kw))
+				.Distinct(StringComparer.Ordinal)
+				.OrderBy((kw) => kw, StringComparer.Ordinal)
+				.ToArray();
+			var keywordSet = normalizedKeywords.Length == 0 ? "(none)" : string.Join(", ", normalizedKeywords);
+
+			var shaderKey = $"{shader.name}|{shaderPath}";
+			if (!byShader.TryGetValue(shaderKey, out var info)) {
+				info = new ShaderUsageInfo {
+					shaderName = shader.name,
+					shaderPath = shaderPath,
+				};
+				byShader[shaderKey] = info;
+			}
+
+			foreach (var kw in normalizedKeywords) {
+				info.allKeywords.Add(kw);
+			}
+
+			if (info.keywordSetCounts.TryGetValue(keywordSet, out var count)) {
+				info.keywordSetCounts[keywordSet] = count + 1;
+			} else {
+				info.keywordSetCounts[keywordSet] = 1;
+			}
+
+			info.materialUsages.Add(new MaterialUsageInfo {
+				materialPath = materialPath,
+				keywordSet = keywordSet,
+			});
+		}
+
+		var allShaders = byShader.Values
+			.OrderBy((s) => s.shaderName, StringComparer.OrdinalIgnoreCase)
+			.ThenBy((s) => s.shaderPath, StringComparer.OrdinalIgnoreCase)
+			.ToList();
+		var coreMaterialsShaders = allShaders
+			.Where(IsCoreMaterialsAttributedShader)
+			.ToList();
+		var nonCoreMaterialsShaders = allShaders
+			.Where((s) => !IsCoreMaterialsAttributedShader(s))
+			.ToList();
+
+		var sb = new StringBuilder();
+		sb.AppendLine($"[Airship] Shader usage report ({platform})");
+		sb.AppendLine($"Report file: {reportPath}");
+		sb.AppendLine("Game bundle scope: shared/resources + shared/scenes");
+		sb.AppendLine($"Published assets: {publishedAssetPaths.Count}");
+		sb.AppendLine($"Materials: {materialPaths.Count}");
+		sb.AppendLine($"Unique shaders: {allShaders.Count}");
+		sb.AppendLine();
+		AppendShaderUsageSection(sb, "CoreMaterials Shaders", coreMaterialsShaders);
+		sb.AppendLine();
+		AppendShaderUsageSection(sb, "Other Shaders", nonCoreMaterialsShaders);
+		var reportText = sb.ToString();
+		WriteShaderUsageReportToFile(reportPath, reportText);
+		Debug.Log(reportText);
+	}
+
+	private static string GetShaderUsageReportPath() {
+		var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+		var buildFolder = Path.Combine(projectRoot, "build");
+		return Path.Combine(buildFolder, "shader_usage_report.txt");
+	}
+
+	private static void WriteShaderUsageReportToFile(string reportPath, string text) {
+		try {
+			var folder = Path.GetDirectoryName(reportPath);
+			if (!string.IsNullOrEmpty(folder)) {
+				Directory.CreateDirectory(folder);
+			}
+
+			File.WriteAllText(reportPath, text ?? string.Empty);
+		} catch (Exception ex) {
+			Debug.LogWarning($"[Airship] Failed to write shader usage report file at {reportPath}: {ex.Message}");
+		}
+	}
+
+	private static bool IsCoreMaterialsAttributedShader(ShaderUsageInfo shader) {
+		if (shader == null) {
+			return false;
+		}
+
+		// CoreMaterials-owned shader assets.
+		if (shader.shaderPath.StartsWith("Assets/AirshipPackages/@Easy/CoreMaterials/", StringComparison.OrdinalIgnoreCase)) {
+			return true;
+		}
+
+		// URP shaders should be attributed to CoreMaterials because CoreMaterials carries the URP shader payload.
+		if (shader.shaderPath.StartsWith("Packages/com.unity.render-pipelines.universal/", StringComparison.OrdinalIgnoreCase)) {
+			return true;
+		}
+
+		if (shader.shaderName.StartsWith("Universal Render Pipeline/", StringComparison.Ordinal)) {
+			return true;
+		}
+
+		return false;
+	}
+
+	private static void AppendShaderUsageSection(StringBuilder sb, string sectionName, List<ShaderUsageInfo> shaders) {
+		sb.AppendLine(sectionName + ":");
+		if (shaders.Count == 0) {
+			sb.AppendLine(" - (none)");
+			return;
+		}
+
+		foreach (var shader in shaders) {
+			sb.AppendLine($" - {shader.shaderName} ({shader.shaderPath})");
+			sb.AppendLine($"   Materials: {shader.materialUsages.Count}");
+			sb.AppendLine($"   All keywords: {(shader.allKeywords.Count == 0 ? "(none)" : string.Join(", ", shader.allKeywords))}");
+			sb.AppendLine("   Keyword sets:");
+			foreach (var kv in shader.keywordSetCounts.OrderByDescending((p) => p.Value).ThenBy((p) => p.Key, StringComparer.Ordinal)) {
+				sb.AppendLine($"    - {kv.Key} ({kv.Value})");
+			}
+			sb.AppendLine("   Material usages:");
+			foreach (var usage in shader.materialUsages.OrderBy((m) => m.materialPath, StringComparer.OrdinalIgnoreCase)) {
+				sb.AppendLine($"    - {usage.materialPath} | {usage.keywordSet}");
+			}
+		}
+	}
+
+	private class ShaderUsageInfo {
+		public string shaderName;
+		public string shaderPath;
+		public SortedSet<string> allKeywords = new(StringComparer.Ordinal);
+		public Dictionary<string, int> keywordSetCounts = new(StringComparer.Ordinal);
+		public List<MaterialUsageInfo> materialUsages = new();
+	}
+
+	private class MaterialUsageInfo {
+		public string materialPath;
+		public string keywordSet;
+	}
+
+	private static bool IsGameBundleName(string assetBundleName) {
+		if (string.IsNullOrEmpty(assetBundleName)) {
+			return false;
+		}
+
+		return assetBundleName.Equals("shared/resources", StringComparison.OrdinalIgnoreCase)
+		       || assetBundleName.Equals("shared/scenes", StringComparison.OrdinalIgnoreCase);
 	}
 
 	// [MenuItem("Airship/Tag Asset Bundles")]
@@ -263,10 +469,183 @@ public static class CreateAssetBundles {
 		return gameConfig;
 	}
 
-	public static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
-		ResetScenes();
+	[MenuItem("Airship/Misc/View Shader Usage Report")]
+	public static void ViewShaderUsageReport() {
+		var gameConfig = GameConfig.Load();
+		if (!gameConfig) {
+			Debug.LogError("Missing GameConfig.");
+			return;
+		}
 
 		if (!PrePublishChecks()) {
+			return;
+		}
+
+		if (!FixBundleNames()) {
+			Debug.LogError("Failed to tag asset bundles.");
+			return;
+		}
+
+		var builds = CollectGameAssetBundleBuilds(gameConfig, includePackageBuilds: false);
+		LogPublishedShaderUsage(builds, AirshipPlatformUtil.GetLocalPlatform());
+	}
+
+	private static List<AssetBundleBuild> CollectGameAssetBundleBuilds(GameConfig gameConfig, bool includePackageBuilds) {
+		var builds = includePackageBuilds
+			? GetPackageAssetBundleBuilds(gameConfig.compileURPShaders)
+			: new List<AssetBundleBuild>();
+
+		// Moving MonoScript/code assets out of scene bundle ownership can break runtime Behaviour resolution.
+		bool IsCodeAssetPath(string path) {
+			return path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+			       || path.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)
+			       || path.EndsWith(".asmref", StringComparison.OrdinalIgnoreCase)
+			       || path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
+		}
+
+		bool IsPackageOwnedPath(string path) {
+			return path.StartsWith("Assets/AirshipPackages/", StringComparison.OrdinalIgnoreCase)
+			       || path.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase);
+		}
+
+		var scenePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var scene in gameConfig.gameScenes) {
+			var scenePath = AssetDatabase.GetAssetPath((SceneAsset)scene);
+			if (!string.IsNullOrEmpty(scenePath)) {
+				scenePaths.Add(scenePath);
+			}
+		}
+
+		var explicitlyAddedScenePaths = AssetDatabase.GetAssetPathsFromAssetBundle("scenes");
+		var explicitlyAddedNonScenePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		var explicitlyPinnedScenePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		if (explicitlyAddedScenePaths.Length > 0) {
+			Debug.Log($"Found {explicitlyAddedScenePaths.Length} explicit assets for scenes bundle.");
+			foreach (var path in explicitlyAddedScenePaths) {
+				if (string.IsNullOrEmpty(path)) {
+					continue;
+				}
+
+				if (path.EndsWith(".unity", StringComparison.OrdinalIgnoreCase)) {
+					scenePaths.Add(path);
+				} else if (IsCodeAssetPath(path)) {
+					explicitlyPinnedScenePaths.Add(path);
+				} else {
+					explicitlyAddedNonScenePaths.Add(path);
+				}
+			}
+		}
+
+		var sceneReferencedAssetPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		if (scenePaths.Count > 0) {
+			var dependencies = AssetDatabase.GetDependencies(scenePaths.ToArray(), true);
+			foreach (var dependency in dependencies) {
+				if (string.IsNullOrEmpty(dependency)) {
+					continue;
+				}
+
+				if (scenePaths.Contains(dependency)) {
+					continue;
+				}
+
+				if (IsCodeAssetPath(dependency)) {
+					continue;
+				}
+
+				if (IsPackageOwnedPath(dependency)) {
+					continue;
+				}
+
+				sceneReferencedAssetPaths.Add(dependency);
+			}
+		}
+		sceneReferencedAssetPaths.UnionWith(explicitlyAddedNonScenePaths.Where((p) => !IsPackageOwnedPath(p)));
+
+		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
+			var assetBundleName = assetBundleFile.ToLowerInvariant();
+			if (assetBundleName == "shared/scenes") {
+				string[] assetPaths = scenePaths
+					.Concat(explicitlyPinnedScenePaths)
+					.Where((path) => path.EndsWith(".unity", StringComparison.OrdinalIgnoreCase) || IsCodeAssetPath(path))
+					.ToArray();
+
+				var sb = new StringBuilder();
+				sb.AppendLine("[Airship] Publishing with the following scenes:");
+				int i = 1;
+				foreach (var p in assetPaths) {
+					sb.AppendLine($"  {i}. " + p);
+					i++;
+				}
+
+				sb.AppendLine("Configure published scenes in the Game Config. Each scene will add to your games total download size.");
+				Debug.Log(sb.ToString());
+
+				var addressableNames = assetPaths.Select((p) => p.ToLowerInvariant()).ToArray();
+				var build = new AssetBundleBuild() {
+					assetBundleName = assetBundleName,
+					assetNames = assetPaths,
+					addressableNames = addressableNames
+				};
+				builds.Add(build);
+			} else if (assetBundleName == "shared/resources") {
+				var assetPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				var resourceGuids = AssetDatabase.FindAssets("*", new[] { "Assets/Resources" });
+				foreach (var guid in resourceGuids) {
+					var path = AssetDatabase.GUIDToAssetPath(guid);
+					if (!string.IsNullOrEmpty(path)) {
+						assetPaths.Add(path);
+					}
+				}
+
+				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
+					assetPaths.Add("Assets/Airship.asbuildinfo");
+				}
+				if (AssetDatabase.AssetPathExists("Assets/GameConfig.asset")) {
+					assetPaths.Add("Assets/GameConfig.asset");
+				}
+				if (AssetDatabase.AssetPathExists("Assets/NetworkPrefabCollection.asset")) {
+					assetPaths.Add("Assets/NetworkPrefabCollection.asset");
+				}
+
+				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("resources");
+				if (explicitlyAddedPaths.Length > 0) {
+					Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for resources bundle.");
+					foreach (var path in explicitlyAddedPaths) {
+						if (!string.IsNullOrEmpty(path) && !IsCodeAssetPath(path) && !IsPackageOwnedPath(path)) {
+							assetPaths.Add(path);
+						}
+					}
+				}
+
+				foreach (var sceneReferencedAssetPath in sceneReferencedAssetPaths) {
+					assetPaths.Add(sceneReferencedAssetPath);
+				}
+
+				var finalAssetPaths = assetPaths
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
+					.Where((p) => !p.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
+					.Where((p) => !IsCodeAssetPath(p))
+					.Where((p) => !IsPackageOwnedPath(p))
+					.Where((path) => !path.ToLowerInvariant().Contains("editor/"))
+					.Where((p) => AssetDatabase.AssetPathExists(p))
+					.Where((p) => !AssetDatabase.IsValidFolder(p))
+					.ToArray();
+				var addressableNames = finalAssetPaths.Select((p) => p.ToLowerInvariant()).ToArray();
+				builds.Add(new AssetBundleBuild() {
+					assetBundleName = assetBundleName,
+					assetNames = finalAssetPaths,
+					addressableNames = addressableNames
+				});
+			}
+		}
+
+		return builds;
+	}
+
+	public static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true, bool skipPrePublishChecks = false) {
+		ResetScenes();
+
+		if (!skipPrePublishChecks && !PrePublishChecks()) {
 			return false;
 		}
 
@@ -297,93 +676,9 @@ public static class CreateAssetBundles {
 		// Act as if we are building all asset bundles (including CoreMaterials).
 		// This is so our current build target will have references to those asset bundles.
 		// This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
-		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds(gameConfig.compileURPShaders);
+		var builds = CollectGameAssetBundleBuilds(gameConfig, includePackageBuilds: true);
 
-		// Make a fake asset bundle with all package content. This makes the build have the correct dependency data.
-		// {
-		// 	var assetGuids = AssetDatabase.FindAssets("*", new string[] { $"Assets/AirshipPackages" }).ToList();
-		// 	var assetPaths = assetGuids.Select((guid) => {
-		// 		var path = AssetDatabase.GUIDToAssetPath(guid);
-		// 		return path;
-		// 	}).Where((p) => !AssetDatabase.IsValidFolder(p)).ToArray();
-		// 	var addressableNames = assetPaths.Select((p) => p.ToLower())
-		// 		.ToArray();
-		// 	var build = new AssetBundleBuild() {
-		// 		assetBundleName = "fake_packages",
-		// 		assetNames = assetPaths.ToArray(),
-		// 		addressableNames = addressableNames
-		// 	};
-		// 	builds.Add(build);
-		// }
-
-		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
-			var assetBundleName = assetBundleFile.ToLowerInvariant();
-			if (assetBundleName == "shared/scenes") {
-				var assetGuids = gameConfig.gameScenes
-					.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s)).ToHashSet();
-
-				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("scenes");
-				Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for scenes bundle.");
-				foreach (var path in explicitlyAddedPaths) {
-					// Debug.Log("  - " + path);
-					assetGuids.Add(AssetDatabase.AssetPathToGUID(path));
-				}
-
-				string[] assetPaths = assetGuids
-					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
-					.ToArray();
-				Debug.Log("Including assets in scenes bundle:");
-				foreach (var p in assetPaths) {
-					Debug.Log("  - " + p);
-				}
-
-				var addressableNames = assetPaths.Select((p) => p.ToLowerInvariant())
-					.ToArray();
-				var build = new AssetBundleBuild() {
-					assetBundleName = assetBundleName,
-					assetNames = assetPaths,
-					addressableNames = addressableNames
-				};
-				builds.Add(build);
-			} else if (assetBundleName == "shared/resources") {
-				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToHashSet();
-				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
-				}
-				if (AssetDatabase.AssetPathExists("Assets/GameConfig.asset")) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/GameConfig.asset"));
-				}
-				if (AssetDatabase.AssetPathExists("Assets/NetworkPrefabCollection.asset")) {
-					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/NetworkPrefabCollection.asset"));
-				}
-
-				var explicitlyAddedPaths = AssetDatabase.GetAssetPathsFromAssetBundle("resources");
-				Debug.Log($"Found {explicitlyAddedPaths.Length} explicit assets for resources bundle.");
-				foreach (var path in explicitlyAddedPaths) {
-					// Debug.Log("  - " + path);
-					assetGuids.Add(AssetDatabase.AssetPathToGUID(path));
-				}
-
-				var assetPaths = assetGuids
-					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
-					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~") || p.EndsWith(".d.ts")))
-					.Where((path) => !path.ToLowerInvariant().Contains("editor/"))
-					.Where((p) => !AssetDatabase.IsValidFolder(p))
-					.ToArray();
-				// Debug.Log("Resources:");
-				// foreach (var path in assetPaths) {
-				// 	Debug.Log("  - " + path);
-				// }
-				var addressableNames = assetPaths
-					.Select((p) => p.ToLowerInvariant())
-					.ToArray();
-				builds.Add(new AssetBundleBuild() {
-					assetBundleName = assetBundleName,
-					assetNames = assetPaths,
-					addressableNames = addressableNames
-				});
-			}
-		}
+		LogPublishedShaderUsage(builds, platform);
 
 		// var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
 		var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
@@ -614,8 +909,12 @@ public static class CreateAssetBundles {
 	public static bool BuildPlatforms(AirshipPlatform[] platforms, bool useCache = true) {
 		var sw = Stopwatch.StartNew();
 		try {
+			if (!PrePublishChecks()) {
+				return false;
+			}
+
 			foreach (var platform in platforms) {
-				var res = BuildGameAssetBundles(platform, useCache);
+				var res = BuildGameAssetBundles(platform, useCache, skipPrePublishChecks: true);
 				if (!res) {
 					return false;
 				}
