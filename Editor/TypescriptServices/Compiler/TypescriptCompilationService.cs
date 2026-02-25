@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -406,7 +407,7 @@ using Object = UnityEngine.Object;
 
                 if (!showProgressBar && (compileFlags & TypeScriptCompileFlags.DisplayProgressBar) != 0) {
                     showProgressBar = true;
-                    UpdateCompilerProgressBar(0f, $"Starting to compile TypeScript code...");
+                    UpdateCompilerProgressBar(0f, $"Starting to compile TypeScript code...", false);
                 }
                 
                 if (!File.Exists(Path.Join(project.Package.Directory, "package.json"))) {
@@ -427,13 +428,14 @@ using Object = UnityEngine.Object;
                     return; // ??
                 }
 
-                try
-                {
+                Process compilerProcess = null;
+                bool cancelled = false;
+                
+                try {
                     if (fullClean) {
                         UpdateCompilerProgressBarText($"Preparing TypeScript project");
                         var success = RunNpmInstall(packageDir);
-                        if (!success)
-                        {
+                        if (!success) {
                             Debug.LogWarning("Failed to install NPM dependencies");
                             return;
                         }
@@ -441,18 +443,42 @@ using Object = UnityEngine.Object;
 
                     compilationState.FilesToCompileCount = 0;
                     compilationState.CompiledFileCount = 0;
-       
-                    var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
-                    TypescriptLogService.LogInfo($"Executed compiler build instance '{arguments.GetCommandString(CompilerCommand.BuildOnly)}' at pid {compilerProcess.Id}");
+
+                    compilerProcess = RunNodeCommand(project.Directory,
+                        $"{TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    TypescriptLogService.LogInfo(
+                        $"Executed compiler build instance '{arguments.GetCommandString(CompilerCommand.BuildOnly)}' at pid {compilerProcess.Id}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
-                    
+
                     while (!compilerProcess.HasExited) {
                         if (compilationState.FilesToCompileCount == 0) continue;
-                        UpdateCompilerProgressBar(
-                            compilationState.CompiledFileCount / (float)compilationState.FilesToCompileCount, $"Compiling TypeScript files {compilationState.CompiledFileCount}/{project.CompilationState.FilesToCompileCount}...");
+
+                        cancelled = UpdateCompilerProgressBar(
+                            compilationState.CompiledFileCount / (float)compilationState.FilesToCompileCount,
+                            $"Compiling TypeScript files {compilationState.CompiledFileCount}/{project.CompilationState.FilesToCompileCount}...",
+                            true);
+                        if (cancelled) {
+                            compilerProcess.Kill();
+                        }
                     }
-                    
+
                     // compilerProcess.WaitForExit();
+                } catch (Win32Exception ex) {
+                    if (compilerProcess != null) {
+                        switch (compilerProcess.ExitCode) {
+                            case ExitCodeKill:
+                                if (cancelled) {
+                                    Debug.Log("Typescript compiler build process was killed by user");
+                                } else {
+                                    Debug.LogError("Typescript compiler build process was killed by system");
+                                    Debug.LogException(ex);
+                                }
+                                break;
+                            default:
+                                Debug.LogException(ex);
+                                break;
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -462,10 +488,16 @@ using Object = UnityEngine.Object;
 
             private static bool showProgressBar = false;
             private static float progress = 0;
-            private static void UpdateCompilerProgressBar(float progress, string text) {
+            private static bool UpdateCompilerProgressBar(float progress, string text, bool cancellable) {
                 TypescriptCompilationService.progress = progress;
-                if (!showProgressBar) return;
+                if (!showProgressBar) return false;
+
+                if (cancellable) {
+                    return EditorUtility.DisplayCancelableProgressBar(TsCompilerService, text, progress);
+                }
+                
                 EditorUtility.DisplayProgressBar(TsCompilerService, text, progress);
+                return false;
             }
             
             private static bool UpdateCompilerProgressBarCancellable(float progress, string text) {
