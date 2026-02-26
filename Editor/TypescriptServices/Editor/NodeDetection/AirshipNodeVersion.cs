@@ -57,6 +57,8 @@ namespace Airship.Editor {
                 new AirshipWindowsNodeDistribution(),
 #elif UNITY_EDITOR_OSX
                 new AirshipOsxNodeDistribution(),
+#elif UNITY_EDITOR_LINUX
+                new AirshipLinuxNodeDistribution(),
 #endif
                 new AirshipNvmNodeDistribution(),
             };
