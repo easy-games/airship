@@ -16,10 +16,13 @@ namespace Code.Managers {
         }
 
         public void Register(CanvasDistanceCondition canvasObject) {
+            if (_canvasObjects.Contains(canvasObject)) return;
+            
             if (!_camera) {
                 _camera = Camera.main;
             }
             _canvasObjects.Add(canvasObject);
+            
             CheckDistanceCondition(canvasObject, _camera.transform.position);
         }
 
@@ -45,6 +48,8 @@ namespace Code.Managers {
         }
 
         private void CheckDistanceCondition(CanvasDistanceCondition canvDistComp, Vector3 cameraPosition) {
+            if (canvDistComp.IsConditionDisabled()) return;
+            
             var canvGo = canvDistComp.gameObject;
 
             var distSqr = Vector3.SqrMagnitude(canvDistComp.transform.position - cameraPosition);
