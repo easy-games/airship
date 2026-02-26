@@ -1033,7 +1033,7 @@ public partial class LuauCore : MonoBehaviour
 
                 IList<Ray> rays = arrayAsList ? new List<Ray>(size) : new Ray[size];
                 for (var i = 0; i < size; i++) {
-                    var j = i * 4;
+                    var j = i * 6;
                     var item = new Ray(new Vector3(arr[j], arr[j + 1], arr[j + 2]), new Vector3(arr[j + 3], arr[j + 4], arr[j + 5]));
                     if (arrayAsList) {
                         rays.Add(item);
