@@ -36,10 +36,10 @@ namespace Code.Bootstrap {
 
             void AddRemoteBundleFile(string fileName) {
                 var version = this.assetVersion;
-                if (this.id.ToLower() == "@easy/corematerials") {
+                if (this.id.ToLowerInvariant() == "@easy/corematerials") {
                     // version = 72 + "";
                 }
-                var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}/{this.id.ToLower()}/assets/{version}/{platform}/{fileName}";
+                var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}/{this.id.ToLowerInvariant()}/assets/{version}/{platform}/{fileName}";
                 results.Add(new RemoteBundleFile(fileName, url, this.id, this.assetVersion));
                 // results.Add(new RemoteBundleFile(fileName + ".manifest", url + ".manifest", this.id, this.version));
             }

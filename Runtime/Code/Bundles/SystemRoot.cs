@@ -182,7 +182,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				continue;
 			}
 
-			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
+			var packageToLoad = packages.Find(p => p.id.ToLowerInvariant() == loadedPair.Value.airshipPackage.id.ToLowerInvariant());
 			// Todo: we can not unload asset bundles if there is only a code change.
 			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion || packageToLoad.codeVersion != loadedPair.Value.airshipPackage.codeVersion) {
 				unloadList.Add(loadedPair.Key);
@@ -204,7 +204,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// We keep code.zip when we will re-loading this same package (code.zip update)
 			// Code.zip is always downloaded on join before this code runs, so we know it'll be up-to-date.
 			bool keepCodeZip = false;
-			var samePackageIdBeingLoaded = packages.Find(p => p.id.ToLower() == loadedBundle.airshipPackage.id.ToLower());
+			var samePackageIdBeingLoaded = packages.Find(p => p.id.ToLowerInvariant() == loadedBundle.airshipPackage.id.ToLowerInvariant());
 			if (samePackageIdBeingLoaded != null) {
 				keepCodeZip = true;
 			}
@@ -372,7 +372,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				int totalCounter = 0;
 				foreach (var collectionName in collections) {
 					onLoadingScreenStep?.Invoke($"Prewarming shaders (1)");
-					var path = $"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants".ToLower();
+					var path = $"Assets/AirshipPackages/@Easy/CoreMaterials/ShaderVariantCollections/{collectionName}.shadervariants".ToLowerInvariant();
 					Debug.Log("Loading shader variant: " + collectionName);
 					if (this.coreMaterialsAssetBundle == null) {
 						Debug.LogWarning("coreMaterialsAssetBundle is null");
@@ -426,9 +426,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		foreach (var package in packages) {
-			if (package.id.ToLower() == "@easy/core") {
+			if (package.id.ToLowerInvariant() == "@easy/core") {
 				this.currentCoreVersion = package.codeVersion;
-			} else if (package.id.ToLower() == "@easy/corematerials") {
+			} else if (package.id.ToLowerInvariant() == "@easy/corematerials") {
 				this.currentCoreMaterialsVersion = package.codeVersion;
 			}
 		}
@@ -560,7 +560,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			"Lists all scripts loaded from code.zip",
 			Parameter.Create("package", "A package name or \"game\""),
 			(packageName) => {
-				if (packageName.ToLower() == "game") {
+				if (packageName.ToLowerInvariant() == "game") {
 					foreach (var b in this.loadedAssetBundles) {
 						if (b.Value.airshipPackage.packageType == AirshipPackageType.Game) {
 							if (this.luauFiles.TryGetValue(b.Value.airshipPackage.id, out var gameScripts)) {
@@ -660,7 +660,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			"Luau GC",
 			Parameter.Create("state", "Options: full, step, off"),
 			(val) => {
-				val = val.ToLower();
+				val = val.ToLowerInvariant();
 				switch (val) {
 					case "full":
 						LuauPlugin.SetGCState(LuauPlugin.LuauGCState.Full);
@@ -711,7 +711,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}));
 
 		DevConsole.AddCommand(Command.Create<string>("luauregistry", "", "Prints info about the Luau plugin", Parameter.Create("context", "Options: game, protected"), (val) => {
-			val = val.ToLower();
+			val = val.ToLowerInvariant();
 			
 			string registryDump;
 			switch (val) {
@@ -730,7 +730,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}));
 
 		DevConsole.AddCommand(Command.Create<string>("luauobjects", "", "Prints count of Unity objects tracked by Luau plugin", Parameter.Create("context", "Options: game, protected, game_server, protected_server"), (val) => {
-			val = val.ToLower();
+			val = val.ToLowerInvariant();
 
 			var context = LuauContext.Game;
 			var onServer = val.EndsWith("_server", StringComparison.OrdinalIgnoreCase);

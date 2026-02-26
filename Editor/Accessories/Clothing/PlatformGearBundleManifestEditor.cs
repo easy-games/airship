@@ -137,17 +137,20 @@ namespace Editor.Accessories.Clothing {
 
                 // Create Class ID's for each gear piece
                 foreach (var gear in manifest.gearList) {
+                    // Ignore if gear already has a class id
                     if (!string.IsNullOrEmpty(gear.classId)) continue;
 
                     // Grab class id from the old accessory.classId
                     if (gear.accessoryPrefabs.Length > 0 &&
                         !string.IsNullOrEmpty(gear.accessoryPrefabs[0].serverClassId)) {
+                        // Found id in accessory
                         gear.classId = gear.accessoryPrefabs[0].serverClassId;
                         EditorUtility.SetDirty(gear);
                         AssetDatabase.SaveAssets();
                         continue;
                     }
                     if (gear.face != null && !string.IsNullOrEmpty(gear.face.serverClassId)) {
+                        // found id in face
                         gear.classId = gear.face.serverClassId;
                         EditorUtility.SetDirty(gear);
                         AssetDatabase.SaveAssets();
@@ -165,6 +168,7 @@ namespace Editor.Accessories.Clothing {
                         category = category,
                         subcategory = subcategory,
                     });
+                    Debug.Log("Creating new class id for gear: " + gear.name);
                     var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}", data, "application/json");
                     req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
                     req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
@@ -188,18 +192,26 @@ namespace Editor.Accessories.Clothing {
 
                 if (string.IsNullOrEmpty(airId)) {
                     // Create new air asset
-                    var req = UnityWebRequest.PostWwwForm(
-                        AirshipPlatformUrl.deploymentService + $"/air-assets/owner-type/ORGANIZATION/owner-id/{easyOrgId}",
-                        JsonUtility.ToJson(new AirAssetCreateRequest() {
-                            contentType = "application/airasset",
-                            contentLength = 1,
-                            name = contentName,
-                            description = contentDescription,
-                            platforms = platforms.Select((p) => AirshipPlatformUtil.GetStringName(p)).ToArray(),
-                        }));
+                    var airPath = AirshipPlatformUrl.deploymentService +
+                                  $"/air-assets/owner-type/ORGANIZATION/owner-id/{easyOrgId}";
+                    var airJson = JsonUtility.ToJson(new AirAssetCreateRequest() {
+                        contentType = "application/airasset",
+                        contentLength = 1,
+                        name = contentName,
+                        description = contentDescription,
+                        platforms = platforms.Select((p) => AirshipPlatformUtil.GetStringName(p)).ToArray(),
+                    });
+                    Debug.Log("Creating air asset at: " + airPath);
+                    Debug.Log("With json: " + airJson);
+                    var req = UnityWebRequest.Post(airPath, airJson, "application/json");
                     req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
+                    req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                     await req.SendWebRequest();
                     Debug.Log("create response: " + req.downloadHandler.text);
+                    if (req.result != UnityWebRequest.Result.Success) {
+                        Debug.LogError("Error creating air asset: " + req.error);
+                        return;
+                    }
                     var data = JsonUtility.FromJson<AirAssetCreateResponse>(req.downloadHandler.text);
                     manifest.airId = data.airAssetId;
                     EditorUtility.SetDirty(this.target);
@@ -322,8 +334,8 @@ namespace Editor.Accessories.Clothing {
             var assetGuids = AssetDatabase.FindAssets("*", new string[] {sourceFolderPath}).ToList();
             var assetPaths = assetGuids
                 .Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
-                .Where((path) => !path.ToLower().Contains("editor/"))
-                .Where((path) => !path.ToLower().Contains("exclude/"))
+                .Where((path) => !path.ToLowerInvariant().Contains("editor/"))
+                .Where((path) => !path.ToLowerInvariant().Contains("exclude/"))
                 .Where((p) => !AssetDatabase.IsValidFolder(p))
                 .ToArray();
             Debug.Log("Resources:");
@@ -331,7 +343,7 @@ namespace Editor.Accessories.Clothing {
                 Debug.Log("  - " + path);
             }
             var addressableNames = assetPaths
-                .Select((p) => p.ToLower())
+                .Select((p) => p.ToLowerInvariant())
                 .Select((p) => {
                     if (p.Contains("gear bundle manifest")) {
                         // strip the path so it's easier to load later

@@ -410,7 +410,7 @@ namespace Code.Accessories.Clothing.Editor {
             }
             
             Texture2D sourceCopy = MakeReadable(source);
-            bool isNormalMap = source.name.ToLower().Contains("normal") || source.name.ToLower().Contains("_n");
+            bool isNormalMap = source.name.ToLowerInvariant().Contains("normal") || source.name.ToLowerInvariant().Contains("_n");
             if (isNormalMap) {
                 // Normal Map needs unpacking
                 Color[] pixels = sourceCopy.GetPixels();

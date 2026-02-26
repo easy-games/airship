@@ -122,7 +122,12 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url));
 				var package = GetBundleFromId(remoteBundleFile.BundleId);
 				string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
-				// Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
+				Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
+
+				if (File.Exists(path)) {
+					Debug.Log("Bundle path already exists. Deleting...");
+					File.Delete(path);
+				}
 
 				request.downloadHandler = new DownloadHandlerFile(path);
 
@@ -146,7 +151,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 						}
 						codeZipUrl = gameCodeZipUrl;
 					} else {
-						codeZipUrl = $"{cdnUrl}/package/{package.id.ToLower()}/code/{package.codeVersion}/code.zip";
+						codeZipUrl = $"{cdnUrl}/package/{package.id.ToLowerInvariant()}/code/{package.codeVersion}/code.zip";
 					}
 
 					if (File.Exists(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"))) {
@@ -156,7 +161,12 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 					var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(codeZipUrl));
 					string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
-					// Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
+					if (File.Exists(path)) {
+						Debug.Log("Code.zip path already exists. Deleting before downloading... path: " + path);
+						File.Delete(path);
+					}
+
+					Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
 
 					request.downloadHandler = new DownloadHandlerFile(path);
 					requests.Add(request.SendWebRequest());

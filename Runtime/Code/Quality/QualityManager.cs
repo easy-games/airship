@@ -49,10 +49,6 @@ namespace Code.Quality {
         /// FPS array is circular, this is the front index
         /// </summary>
         private int _fpsFront;
-        /// <summary>
-        /// True once we've first loaded all SampleCount samples into _fps
-        /// </summary>
-        private bool _fpsSamplesLoaded;
         private bool firstRun = true;
 
         private bool capturingFrameTimings = false;
@@ -82,12 +78,9 @@ namespace Code.Quality {
         private void Update() {
             if (this.capturingFrameTimings) {
                 FrameTimingManager.CaptureFrameTimings();
-
-                if (!_fpsSamplesLoaded && _fpsFront == MaxSampleCount - 1) _fpsSamplesLoaded = true;
-                if (this.samplesCaptured < MaxSampleCount) {
-                    _fps[_fpsFront++ % MaxSampleCount] = (short) (1d / Time.unscaledDeltaTime);
-                    this.samplesCaptured++;
-                }
+                _fps[_fpsFront] = (short)(1d / Time.unscaledDeltaTime);
+                _fpsFront = (_fpsFront + 1) % MaxSampleCount;
+                this.samplesCaptured = Math.Min(this.samplesCaptured + 1, MaxSampleCount);
 
                 // Are we ready to stop capturing and do the quality check?
                 if (Time.unscaledTime > this.captureFrameTimingsUntilTime) {
@@ -169,16 +162,25 @@ namespace Code.Quality {
         /// Gets the slowest percent of frames and averages them.
         /// </summary>
         private double GetPercentFps(float percent) {
+            if (this.samplesCaptured <= 0) return 0;
+
             var percentSampleCount = (int) Mathf.Ceil(this.samplesCaptured * percent);
+            percentSampleCount = Mathf.Clamp(percentSampleCount, 1, this.samplesCaptured);
+            var firstSampleIndex = (this._fpsFront - this.samplesCaptured + MaxSampleCount) % MaxSampleCount;
             
-            // Load the first N samples and keep samples sorted
-            var samples = new List<short>(_fps.AsSpan(0, percentSampleCount).ToArray());
+            // Load the first N captured samples and keep samples sorted.
+            var samples = new List<short>(percentSampleCount);
+            for (var i = 0; i < percentSampleCount; i++) {
+                var sampleIndex = (firstSampleIndex + i) % MaxSampleCount;
+                samples.Add(_fps[sampleIndex]);
+            }
             samples.Sort();
             
             for (var i = percentSampleCount; i < this.samplesCaptured; i++) {
+                var sampleIndex = (firstSampleIndex + i) % MaxSampleCount;
                 // If we're slower than the best FPS in samples, insert
                 var largestFpsSample = samples[^1];
-                var sample = _fps[i];
+                var sample = _fps[sampleIndex];
                 if (sample < largestFpsSample) {
                     var index = samples.BinarySearch(sample);
                     // Will return bitwise compliment if larger than list

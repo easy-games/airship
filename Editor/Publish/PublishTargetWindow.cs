@@ -204,7 +204,7 @@ public class PublishTargetPopup : PopupWindowContent {
                     var tooltip =
                         "<b>" + g.name + "</b>\n" +
                         "@" + org.slugProperCase + "\n\n" +
-                        "Visibility: " + (g.visibility.ToLower()) + "\n" +
+                        "Visibility: " + (g.visibility.ToLowerInvariant()) + "\n" +
                         "Last update: " + lastUpdateStr + "\n" +
                         "Plays: " + g.plays;
                     if (GUILayout.Button(new GUIContent(g.name, tooltip), toggleStyle)) {

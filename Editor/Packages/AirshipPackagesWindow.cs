@@ -467,7 +467,7 @@ namespace Editor.Packages {
                 // This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
                 
                 var compileUrpShaders = true;
-                if (packageDoc.id.ToLower() == "@easy/core") {
+                if (packageDoc.id.ToLowerInvariant() == "@easy/core") {
                     compileUrpShaders = false;
                 }
                 List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds(compileUrpShaders);
@@ -605,9 +605,9 @@ namespace Editor.Packages {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
                 var paths = new List<string>();
-                var scopedId = packageDoc.id.ToLower();
+                var scopedId = packageDoc.id.ToLowerInvariant();
                 foreach (var guid in binaryFileGuids) {
-                    var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+                    var path = AssetDatabase.GUIDToAssetPath(guid).ToLowerInvariant();
                     if (path.StartsWith("assets/airshippackages/" + scopedId + "/")) {
                         paths.Add(path);
                     }
@@ -650,7 +650,7 @@ namespace Editor.Packages {
 
             var urls = deploymentDto.urls;
             var split = packageDoc.id.Split("/");
-            var orgScope = split[0].ToLower();
+            var orgScope = split[0].ToLowerInvariant();
             var packageIdOnly = split[1];
             uploadSizeBytes = 0;
             var uploadList = new List<IEnumerator>() {
@@ -872,10 +872,10 @@ namespace Editor.Packages {
             Debug.Log($"Downloading {packageId}...");
             var gameConfig = GameConfig.Load();
 
-            codeVersion = codeVersion.ToLower().Replace("v", "");
+            codeVersion = codeVersion.ToLowerInvariant().Replace("v", "");
 
             // Source.zip
-            var url = $"{gameCdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var url = $"{gameCdnUrl}/package/{packageId.ToLowerInvariant()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
                 Path.Join("bundles", "temp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
