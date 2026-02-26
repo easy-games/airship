@@ -161,7 +161,12 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 					var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(codeZipUrl));
 					string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
-					// Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
+					if (File.Exists(path)) {
+						Debug.Log("Code.zip path already exists. Deleting before downloading... path: " + path);
+						File.Delete(path);
+					}
+
+					Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
 
 					request.downloadHandler = new DownloadHandlerFile(path);
 					requests.Add(request.SendWebRequest());
