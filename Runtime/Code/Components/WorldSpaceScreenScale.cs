@@ -2,9 +2,8 @@ using System;
 using UnityEngine;
 
 [RequireComponent(typeof(RectTransform))]
-public class WorldSpaceScreenScale : MonoBehaviour
-{
-    [SerializeField] private int scale = 1;
+public class WorldSpaceScreenScale : MonoBehaviour {
+    [SerializeField] public float scaleFactor = 1f;
     [NonSerialized] private float minScaleDelta = 0.0025f;
     private Vector3 defaultScale;
     private Camera cam;
@@ -25,7 +24,7 @@ public class WorldSpaceScreenScale : MonoBehaviour
     // Update is called once per frame
     void Update() {
         float dist = Vector3.Distance(cam.transform.position, transform.position);
-        float targetScale = 1 + (dist / 100f) * scale;
+        float targetScale = 1 + (dist / 100f) * scaleFactor;
         if (Mathf.Abs(lastAppliedScale - targetScale) < minScaleDelta) {
             return;
         }
