@@ -1867,7 +1867,7 @@ GameObject:
   - component: {fileID: 771246221}
   - component: {fileID: 771246220}
   m_Layer: 0
-  m_Name: ErrorAnalyticsForwarded
+  m_Name: ErrorAnalyticsForwarder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
