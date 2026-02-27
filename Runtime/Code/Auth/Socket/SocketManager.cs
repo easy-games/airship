@@ -83,7 +83,26 @@ public class SocketManager : Singleton<SocketManager> {
                     { "token", InternalHttpManager.authToken }
                 },
                 Transport = TransportProtocol.WebSocket,
-                Reconnection = false
+                Reconnection = false,
+                ExtraHeaders = new Dictionary<string, string>() {
+                    {"airship-device", DeviceBridge.GetDeviceType().ToString()},
+#if UNITY_IOS
+                    {"airship-os", "iOS"},
+                    {"airship-device-class", "Mobile"},
+#elif UNITY_ANDROID
+                    {"airship-os", "Android"},
+                    {"airship-device-class", "Mobile"},
+#elif UNITY_STANDALONE_WIN
+                    {"airship-os", "Windows"},
+                    {"airship-device-class", "Desktop"},
+#elif UNITY_STANDALONE_OSX
+                    {"airship-os", "OSX"},
+                    {"airship-device-class", "Desktop"},
+#else
+                    {"airship-os", "Unknown"},
+                    {"airship-device-class", "Unknown"},
+#endif
+                }
             });
             Instance.socket.JsonSerializer = new NewtonsoftJsonSerializer();
             LuauCore.onResetInstance += LuauCore_OnResetInstance;
