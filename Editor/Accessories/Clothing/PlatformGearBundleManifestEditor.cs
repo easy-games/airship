@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Code.Accessories.Clothing;
 using Code.Authentication;
@@ -13,18 +12,23 @@ using Code.Http.Internal;
 using Code.Platform.Shared;
 using Code.Player.Accessories;
 using Editor.Packages;
+using Newtonsoft.Json;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Pipeline;
+using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
+using Task = System.Threading.Tasks.Task;
 
 namespace Editor.Accessories.Clothing {
     [CustomEditor(typeof(PlatformGearBundleManifest))]
     [CanEditMultipleObjects]
-    public class PlatformGearBundleManifestEditor : UnityEditor.Editor {
+    public class PlatformGearBundleManifestEditor : UnityEditor.Editor , IActiveBuildTargetChanged{
+        private static readonly string defaultLogStr = "{buildLogs: []}";
 #if AIRSHIP_STAGING
         private static string easyOrgId = "6536df9f3843ac629cf3b8b1";
         private static string defaultImageId = "b5f260d4-2678-4255-b9bd-9136dd3edf36";
@@ -33,6 +37,58 @@ namespace Editor.Accessories.Clothing {
         private static string defaultImageId = "64351892-40d4-409b-ab3a-501818213b50";
 #endif
         private bool skipBuild = false;
+
+        internal class BuildLogger {
+            public static void Clear() {
+                SessionState.SetString("PublishBuildLogs", defaultLogStr);    
+            }
+            
+            public static void Log(string message, LogType level) {
+                var logsStr = SessionState.GetString("PublishBuildLogs", defaultLogStr);
+                var logs = JsonConvert.DeserializeObject<AllBuildLogs>(logsStr);
+                var newLength = logs.buildLogs.Length + 1;
+                Array.Resize(ref logs.buildLogs, newLength);
+                logs.buildLogs[newLength - 1] = new BuildLog(message, level);
+                SessionState.SetString("PublishBuildLogs", Unity.Plastic.Newtonsoft.Json.JsonConvert.SerializeObject(logs));
+            }
+
+            public static void PrintResults() {
+                Debug.Log("PUBLISH REPORT:::");
+                var logsStr = SessionState.GetString("PublishBuildLogs", "{buildLogs: []}");
+                var logs = JsonConvert.DeserializeObject<AllBuildLogs>(logsStr);
+                foreach (var log in logs.buildLogs) {
+                    log.Log();
+                }
+                Debug.Log(":::PUBLISH REPORT DONE");
+            }
+        }
+
+        [Serializable]
+        internal class AllBuildLogs {
+            public BuildLog[] buildLogs;
+        }
+        
+        [Serializable]
+        internal class BuildLog {
+            public string message;
+            public LogType level;
+
+            public BuildLog(string message, LogType level) {
+                this.message = message;
+                this.level = level;
+                Log();
+            }
+
+            public void Log() {
+                if (level == LogType.Error || level == LogType.Exception) {
+                    Debug.LogError(message);
+                } else if (level == LogType.Warning) {
+                    Debug.LogWarning(message);
+                } else {
+                    Debug.Log(message);
+                }
+            }
+        }
 
         [MenuItem("Airship/Internal/Publish All Platform Gear")]
         public static async void PublishAllPlatformGearBundles() {
@@ -47,13 +103,28 @@ namespace Editor.Accessories.Clothing {
                     gearBundles.Add(obj);
                 }
             }
-
+            
             int counter = 0;
             foreach (var gearBundle in gearBundles) {
                 var editor = CreateEditor(gearBundle) as PlatformGearBundleManifestEditor;
                 await editor.BuildAllPlatforms();
                 counter++;
                 Debug.Log($"Gear publish progress: {counter}/{guids.Length}");
+                await Awaitable.WaitForSecondsAsync(0.1f);
+            }
+        }
+
+        [MenuItem("Airship/Internal/Publish Selected Platform Gear")]
+        public static async void PublishSelectedPlatformGearBundles() {
+            var counter = 0;
+            var bundles = Selection.GetFiltered<PlatformGearBundleManifest>(SelectionMode.Assets);
+            var length = bundles.Length;
+            BuildLogger.Clear();
+            foreach(var gearBundle in bundles){
+                var editor = CreateEditor(gearBundle) as PlatformGearBundleManifestEditor;
+                await editor.BuildAllPlatforms();
+                counter++;
+                BuildLogger.Log($"Gear publish progress: {counter}/{length}", LogType.Log);
                 await Awaitable.WaitForSecondsAsync(0.1f);
             }
         }
@@ -71,6 +142,7 @@ namespace Editor.Accessories.Clothing {
 
             if (GUILayout.Button("Publish")) {
                 Debug.Log("Publishing");
+                BuildLogger.Clear();
                 BuildAllPlatforms();
             }
 
@@ -93,9 +165,10 @@ namespace Editor.Accessories.Clothing {
                 Debug.LogError("ERROR Missing Modules");
                 return;
             }
+            
 
             var st = Stopwatch.StartNew();
-            Debug.Log("Build All Platforms Started");
+            BuildLogger.Log("Build All Platforms Started", LogType.Log);
             try {
                 List<AirshipPlatform> platforms = new();
                 platforms.AddRange(AirshipPlatformUtil.livePlatforms);
@@ -117,14 +190,21 @@ namespace Editor.Accessories.Clothing {
                     return (category, subcategory);
                 }
 
-                // Pre-build check: Make sure all gear accessory LOD's are in the right folder
+                // Pre-build check:
+                // Make sure all gear accessory LOD's are in the right folder
+                // Make sure no gear is on the left or right hand (items)
                 foreach (var gear in manifest.gearList) {
                     if (gear.accessoryPrefabs != null) {
                         foreach (var accessory in gear.accessoryPrefabs) {
+                            if (accessory.accessorySlot == AccessorySlot.LeftHand ||
+                                accessory.accessorySlot == AccessorySlot.RightHand) {
+                                BuildLogger.Log($"{accessory.gameObject.name} is assigned to a left or right hand which is not allowed. Those slots are reserved for held items", LogType.Error);
+                                return;
+                            }
                             foreach (var mesh in accessory.meshLods) {
                                 var path = AssetDatabase.GetAssetPath(mesh);
                                 if (!path.StartsWith("Assets/Gear")) {
-                                    Debug.LogError($"{accessory.gameObject.name} has an LOD mesh outside of the gear folder. Place all assets (including LOD meshes) inside of the gear folder. Invalid mesh path: " + path);
+                                    BuildLogger.Log($"{accessory.gameObject.name} has an LOD mesh outside of the gear folder. Place all assets (including LOD meshes) inside of the gear folder. Invalid mesh path: " + path, LogType.Error);
                                     return;
                                 }
                             }
@@ -168,17 +248,17 @@ namespace Editor.Accessories.Clothing {
                         category = category,
                         subcategory = subcategory,
                     });
-                    Debug.Log("Creating new class id for gear: " + gear.name);
+                    BuildLogger.Log("Creating new class id for gear: " + gear.name, LogType.Log);
                     var req = UnityWebRequest.Post($"{AirshipPlatformUrl.contentService}/gear/resource-id/{easyOrgId}", data, "application/json");
                     req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
                     req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                     await req.SendWebRequest();
                     if (req.result != UnityWebRequest.Result.Success) {
-                        Debug.Log("Post request: " + data);
-                        Debug.LogError("Failed to create gear class: " + req.downloadHandler.text);
+                        BuildLogger.Log("Post request: " + data, LogType.Log);
+                        BuildLogger.Log("Failed to create gear class: " + req.downloadHandler.text, LogType.Error);
                         return;
                     }
-                    Debug.Log("Create classId response: " + req.downloadHandler.text);
+                    BuildLogger.Log("Create classId response: " + req.downloadHandler.text, LogType.Log);
                     var createResponse = JsonUtility.FromJson<GearCreateResponse>(req.downloadHandler.text);
                     gear.classId = createResponse.classId;
                     EditorUtility.SetDirty(gear);
@@ -201,15 +281,15 @@ namespace Editor.Accessories.Clothing {
                         description = contentDescription,
                         platforms = platforms.Select((p) => AirshipPlatformUtil.GetStringName(p)).ToArray(),
                     });
-                    Debug.Log("Creating air asset at: " + airPath);
-                    Debug.Log("With json: " + airJson);
+                    BuildLogger.Log("Creating air asset at: " + airPath, LogType.Log);
+                    BuildLogger.Log("With json: " + airJson, LogType.Log);
                     var req = UnityWebRequest.Post(airPath, airJson, "application/json");
                     req.SetRequestHeader("Authorization", "Bearer " + InternalHttpManager.editorAuthToken);
                     req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                     await req.SendWebRequest();
-                    Debug.Log("create response: " + req.downloadHandler.text);
+                    BuildLogger.Log("create response: " + req.downloadHandler.text, LogType.Log);
                     if (req.result != UnityWebRequest.Result.Success) {
-                        Debug.LogError("Error creating air asset: " + req.error);
+                        BuildLogger.Log("Error creating air asset: " + req.error, LogType.Error);
                         return;
                     }
                     var data = JsonUtility.FromJson<AirAssetCreateResponse>(req.downloadHandler.text);
@@ -223,7 +303,7 @@ namespace Editor.Accessories.Clothing {
                 foreach (var platform in platforms) {
                     var path = await this.BuildPlatform(platform, airId);
                     if (string.IsNullOrEmpty(path)) {
-                        Debug.LogError("Unable to build platform: " + platform);
+                        BuildLogger.Log("Unable to build platform: " + platform, LogType.Error);
                         return;
                     }
 
@@ -238,7 +318,7 @@ namespace Editor.Accessories.Clothing {
 
                     // Update air asset
                     var bytes = await File.ReadAllBytesAsync(buildOutputFile);
-                    Debug.Log("bytes length: " + bytes.Length + ", path: " + buildOutputFile);
+                    BuildLogger.Log("bytes length: " + bytes.Length + ", path: " + buildOutputFile, LogType.Log);
                     bytesCount = bytes.Length;
                     var updateReq = UnityWebRequest.Put(AirshipPlatformUrl.deploymentService + $"/air-assets/{airId}",
                         JsonUtility.ToJson(new AirAssetCreateRequest() {
@@ -253,7 +333,7 @@ namespace Editor.Accessories.Clothing {
                     updateReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                     await updateReq.SendWebRequest();
                     if (updateReq.result != UnityWebRequest.Result.Success) {
-                        Debug.LogError("Failed to update air asset: " + updateReq.downloadHandler.text);
+                        BuildLogger.Log(("Failed to update air asset: " + updateReq.downloadHandler.text), LogType.Error);
                         EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                         return;
                     }
@@ -268,12 +348,12 @@ namespace Editor.Accessories.Clothing {
                         }
                         putReq.SetRequestHeader("x-airship-ignore-rate-limit", "true");
 
-                        Debug.Log("Uploading asset bundle");
+                        BuildLogger.Log("Uploading asset bundle", LogType.Log);
                         await putReq.SendWebRequest();
 
                         if (putReq.result != UnityWebRequest.Result.Success) {
-                            Debug.LogError(putReq.error);
-                            Debug.LogError(putReq.downloadHandler.text);
+                            BuildLogger.Log(putReq.error, LogType.Error);
+                            BuildLogger.Log(putReq.downloadHandler.text, LogType.Error);
                             EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                             return;
                         }
@@ -298,7 +378,7 @@ namespace Editor.Accessories.Clothing {
                     req.SetRequestHeader("x-airship-ignore-rate-limit", "true");
                     await req.SendWebRequest();
                     if (req.result != UnityWebRequest.Result.Success) {
-                        Debug.LogError($"patch classId. url: {url}, response: {req.downloadHandler.text}, authToken: {InternalHttpManager.editorAuthToken}");
+                        BuildLogger.Log($"patch classId. url: {url}, response: {req.downloadHandler.text}, authToken: {InternalHttpManager.editorAuthToken}", LogType.Error);
                         EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                         return;
                     }
@@ -308,11 +388,14 @@ namespace Editor.Accessories.Clothing {
                     EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows);
                 }
                 
-                Debug.Log($"<color=green>Finished building {bundlePaths.Count} asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color> File size: " + AirshipEditorUtil.GetFileSizeText(bytesCount));
+                BuildLogger.Log($"<color=green>Finished building {bundlePaths.Count} asset bundles for all platforms in {st.Elapsed.Seconds} seconds.</color> File size: " + AirshipEditorUtil.GetFileSizeText(bytesCount), LogType.Log);
             } catch (Exception e) {
-                Debug.LogError("ERROR: " + e.Message);
+                BuildLogger.Log("ERROR: " + e.Message, LogType.Error);
             }
-
+            
+            st.Stop();
+            BuildLogger.Log("Build All Platforms FINISHED", LogType.Log);
+            BuildLogger.PrintResults();
         }
 
         /// <summary>
@@ -431,6 +514,13 @@ namespace Editor.Accessories.Clothing {
                 AssetDatabase.CreateAsset(manifest, newFolderPath + "/Gear Bundle Manifest.asset");
                 AssetDatabase.SaveAssets();
             }
+        }
+
+        public int callbackOrder { get; } = 0;
+
+        public void OnActiveBuildTargetChanged(BuildTarget previousTarget, BuildTarget newTarget) {
+            // After all platform switches, log to the console
+            BuildLogger.PrintResults();
         }
     }
 }
