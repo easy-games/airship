@@ -37,7 +37,7 @@ public class WorldSaveFile : ScriptableObject {
         public VoxelData[] data;
         public uint[] color;
         public Dictionary<ushort, BinaryBlob> customData;
-        
+
         public SaveChunk(Vector3Int key, VoxelData[] data, uint[] color, Dictionary<ushort, BinaryBlob> customData) {
             this.key = key;
             this.data = data;
@@ -50,7 +50,7 @@ public class WorldSaveFile : ScriptableObject {
             writer.Write(key.x);
             writer.Write(key.y);
             writer.Write(key.z);
-            
+
             // Write colors:
             writer.Write((uint)color.Length);
             var colorPoolLen = color.Length * sizeof(uint);
@@ -58,7 +58,7 @@ public class WorldSaveFile : ScriptableObject {
             Buffer.BlockCopy(color, 0, colorPool, 0, colorPoolLen);
             writer.Write(colorPool, 0, colorPoolLen);
             ArrayPool<byte>.Shared.Return(colorPool);
-            
+
             // Write voxel data:
             writer.Write((uint)data.Length);
             var dataPoolLen = data.Length * sizeof(ushort);
@@ -118,7 +118,7 @@ public class WorldSaveFile : ScriptableObject {
                 voxelData.Add(c);
             }
             ArrayPool<byte>.Shared.Return(dataBytes);
-            
+
             // Read custom data:
             if (version >= 3) {
                 var numCustomElements = reader.ReadInt32();
@@ -254,15 +254,15 @@ public class WorldSaveFile : ScriptableObject {
             savedChunks.Add(chunkData);
             finalChunkCounter++;
         }
-        
+
         // Serialize:
         using var memStream = new MemoryStream();
         using var writer = new BinaryWriter(memStream);
-        
+
         // Serializer version:
         const ushort version = 3;
         writer.Write(version);
-        
+
         // Serialize chunks:
         writer.Write((uint)savedChunks.Count);
         Log("Writing chunk size: " + savedChunks.Count);
@@ -270,13 +270,13 @@ public class WorldSaveFile : ScriptableObject {
             Log("Serializing chunk: " + chunk.key);
             chunk.Serialize(writer, version);
         }
-        
+
         // Compress:
         var buffer = memStream.GetBuffer();
         var bufferSpan = new ReadOnlySpan<byte>(buffer, 0, (int)memStream.Length);
         chunksCompressed = VoxelCompressUtil.CompressToByteArrayV2(bufferSpan);
         chunksCompressedV2 = true;
-        
+
 #if UNITY_EDITOR
         if (!Application.isPlaying) {
             Log($"Saved {finalChunkCounter} chunks to {name} (raw: {FormatDataSize(memStream.Length)}) (compressed: {FormatDataSize(chunksCompressed.Length)})");
@@ -308,7 +308,7 @@ public class WorldSaveFile : ScriptableObject {
         for (int i = 0; i < data.Count; i++) {
             BlockId fileBlockId = VoxelWorld.GetVoxelDataId(data[i]);
             ushort extraBits = VoxelWorld.GetVoxelDataExtraBits(data[i]);
-            
+
             bool found = blockRemapping.TryGetValue(fileBlockId, out var updatedBlockId);
             if (found) {
                 VoxelData vox = (VoxelData)(updatedBlockId | extraBits);
@@ -322,11 +322,11 @@ public class WorldSaveFile : ScriptableObject {
 #endif
 
                 writeChunk.readWriteVoxel[i] = vox;
-                
+
                 // Note: This is a huge GC alloc penalty, but these aren't really used (and are recomputed on first use anyway),
                 // thus, this line has been commented out for now:
                 // writeChunk.keysWithVoxels.Add(i);
-                
+
                 if (writeColor) {
                     writeChunk.color[i] = color[i];
                 }
@@ -350,6 +350,11 @@ public class WorldSaveFile : ScriptableObject {
         Dictionary<BlockId, BlockId> blockRemapping = new();
 
         foreach (var blockIdToScopeName in this.blockIdToScopeName) {
+            // Example code for fixing missing block
+            // if (blockIdToScopeName.name == "@Easy/VoxelWorld:Grass 1") {
+            //     blockRemapping[blockIdToScopeName.id] = this.blockIdToScopeName.Find((s) => s.name == "@Easy/VoxelWorld:Grass").id;
+            //     continue;
+            // }
 
             //see if this block exists in the world blockfiles
             var definition = world.voxelBlocks.GetBlockDefinitionByStringId(blockIdToScopeName.name);
@@ -367,7 +372,7 @@ public class WorldSaveFile : ScriptableObject {
         // If compressed data is available, use that instead:
         if (chunksCompressed != null && chunksCompressed.Length > 0) {
             Profiler.BeginSample("ReadVoxelWorldChunks");
-            
+
             // Decompress and deserialize chunks:
             Profiler.BeginSample("DecompressChunks");
             using var decompressedStream = chunksCompressedV2
@@ -388,7 +393,7 @@ public class WorldSaveFile : ScriptableObject {
                 Profiler.BeginSample("Deserialize");
                 var key = SaveChunk.Deserialize(reader, version, data, color, customData);
                 Profiler.EndSample();
-                
+
                 counter += 1;
                 Profiler.BeginSample("LoadChunkIntoVoxelWorld");
                 try {
@@ -398,7 +403,7 @@ public class WorldSaveFile : ScriptableObject {
                 }
                 Profiler.EndSample();
             }
-            
+
             Profiler.EndSample();
         } else {
             Log("Loading non compressed chunk");
@@ -414,7 +419,7 @@ public class WorldSaveFile : ScriptableObject {
             Log($"[Voxel World]: Loaded {counter} chunks");
         }
 #endif
-        
+
         Profiler.EndSample();
     }
 

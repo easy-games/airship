@@ -21,7 +21,7 @@ public class EasyFileService {
     }
 
     public static string[] GetFilesInPath(string path, string searchPattern = "*.ts") {
-        path = path.ToLower();
+        path = path.ToLowerInvariant();
 
         // code.zip
         var luaOnlyPattern = searchPattern.Replace(".ts", ".lua");
@@ -30,7 +30,7 @@ public class EasyFileService {
             List<string> results = new();
             foreach (var pair in root.luauFiles) {
                 foreach (var filePair in pair.Value) {
-                    var p = filePair.Key.ToLower();
+                    var p = filePair.Key.ToLowerInvariant();
                     if (p.Contains(path) && Regex.IsMatch(p, luaOnlyPattern)) {
                         results.Add(p);
                     }
@@ -53,7 +53,7 @@ public class EasyFileService {
                 List<string> all = new();
                 foreach (var guid in guids)
                 {
-                    var p = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+                    var p = AssetDatabase.GUIDToAssetPath(guid).ToLowerInvariant();
                     if (p.Contains(path) && Regex.IsMatch(p, searchPattern))
                     {
                         results.Add(p);

@@ -18,6 +18,7 @@ namespace Code {
             "PushNotifications",
 #endif
             "VideoPlayer",
+            "DistanceConditionDisabler",
         };
 
         public static bool HasFlag(string flag) {

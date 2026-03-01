@@ -107,6 +107,46 @@ namespace Editor.Packages {
             currentEnvironment = envName;
         }
 
+#if AIRSHIP_INTERNAL
+        [MenuItem("Airship/Build CoreMaterials/Mac")]
+        private static void MenuBuildCoreMaterialsMac() {
+            BuildCoreMaterialsForPlatforms(new List<AirshipPlatform>() {
+                AirshipPlatform.Mac,
+            });
+        }
+
+        [MenuItem("Airship/Build CoreMaterials/Windows")]
+        private static void MenuBuildCoreMaterialsWindows() {
+            BuildCoreMaterialsForPlatforms(new List<AirshipPlatform>() {
+                AirshipPlatform.Windows,
+            });
+        }
+
+        [MenuItem("Airship/Build CoreMaterials/iOS")]
+        private static void MenuBuildCoreMaterialsIOS() {
+            BuildCoreMaterialsForPlatforms(new List<AirshipPlatform>() {
+                AirshipPlatform.iOS,
+            });
+        }
+
+        [MenuItem("Airship/Build CoreMaterials/Android")]
+        private static void MenuBuildCoreMaterialsAndroid() {
+            BuildCoreMaterialsForPlatforms(new List<AirshipPlatform>() {
+                AirshipPlatform.Android,
+            });
+        }
+#endif
+
+        private static void BuildCoreMaterialsForPlatforms(List<AirshipPlatform> platforms) {
+            var window = AirshipPackagesWindow.GetWindow<AirshipPackagesWindow>();
+            var pkg = window.gameConfig.packages.Find((p) => p.id.ToLowerInvariant() == "@easy/corematerials");
+            if (pkg == null) {
+                Debug.LogError("Missing CoreMaterials package.");
+                return;
+            }
+            EditorCoroutineUtility.StartCoroutineOwnerless(window.PublishPackage(pkg, false, true, true, platforms));
+        }
+
         private void OnGUI() {
             this.scrollHeight = GUILayout.BeginScrollView(this.scrollHeight);
             
@@ -316,20 +356,26 @@ namespace Editor.Packages {
             GUILayout.EndScrollView();
         }
 
-        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets, bool isCoreMaterials) {
-            var confirmTitle = "Package Publish";
-            var confirmMessage = $"You are about to publish {packageDoc.id}.";
-            #if AIRSHIP_INTERNAL
+        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets, bool isCoreMaterials, List<AirshipPlatform> platforms = null) {
+            if (!isCoreMaterials) {
+                var confirmTitle = "Package Publish";
+                var confirmMessage = $"You are about to publish {packageDoc.id}.";
+#if AIRSHIP_INTERNAL
                 confirmTitle = $"{currentEnvironment} Publish";
                 confirmMessage = $"You are about to publish {packageDoc.id} to {currentEnvironment}.";
-            #endif
-            var okWithPublish = EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Publish", "Cancel");
-            if (!okWithPublish) {
-                yield break;
+#endif
+                var okWithPublish = EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Publish", "Cancel");
+                if (!okWithPublish) {
+                    yield break;
+                }
             }
-            
-            Debug.Log("Starting deploy of " + packageDoc.id + "...");
-            
+
+            if (isCoreMaterials) {
+                Debug.Log("Starting build of CoreMaterials...");
+            } else {
+                Debug.Log("Starting deploy of " + packageDoc.id + "...");
+            }
+
             List<string> possibleKeys;
             if (currentEnvironment == "Staging") {
                 possibleKeys = new List<string> { AuthConfig.instance.stagingApiKey, InternalHttpManager.editorAuthToken };
@@ -381,27 +427,29 @@ namespace Editor.Packages {
                 yield break;
             }
 
-            List<AirshipPlatform> platforms = new() {
-                AirshipPlatform.iOS,
-                AirshipPlatform.Android,
-            };
-            // We want to end up on our editor machine's platform
+            if (platforms == null) {
+                platforms = new() {
+                    AirshipPlatform.iOS,
+                    AirshipPlatform.Android,
+                };
+                // We want to end up on our editor machine's platform
 #if UNITY_EDITOR_OSX
-            platforms.Add(AirshipPlatform.Windows);
-            platforms.Add(AirshipPlatform.Mac);
+                platforms.Add(AirshipPlatform.Windows);
+                platforms.Add(AirshipPlatform.Mac);
 #else
-		platforms.Add(AirshipPlatform.Mac);
-		platforms.Add(AirshipPlatform.Windows);
+		        platforms.Add(AirshipPlatform.Mac);
+		        platforms.Add(AirshipPlatform.Windows);
 #endif
+            }
 
             // Uncomment to just build iOS
-            if (isCoreMaterials) {
-                platforms.Clear();
-                platforms.Add(AirshipPlatform.iOS);
-                platforms.Add(AirshipPlatform.Android);
-                // platforms.Add(AirshipPlatform.Windows);
-                // platforms.Add(AirshipPlatform.Mac);
-            }
+            // if (isCoreMaterials) {
+            //     platforms.Clear();
+            //     platforms.Add(AirshipPlatform.iOS);
+            //     platforms.Add(AirshipPlatform.Android);
+            //     // platforms.Add(AirshipPlatform.Windows);
+            //     // platforms.Add(AirshipPlatform.Mac);
+            // }
 
             if (!CreateAssetBundles.PrePublishChecks()) {
                 yield break;
@@ -419,7 +467,7 @@ namespace Editor.Packages {
                 // This is paired with changes to Scriptable Build Pipeline that prevent these bundles from actually being built.
                 
                 var compileUrpShaders = true;
-                if (packageDoc.id.ToLower() == "@easy/core") {
+                if (packageDoc.id.ToLowerInvariant() == "@easy/core") {
                     compileUrpShaders = false;
                 }
                 List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds(compileUrpShaders);
@@ -557,9 +605,9 @@ namespace Editor.Packages {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
                 var paths = new List<string>();
-                var scopedId = packageDoc.id.ToLower();
+                var scopedId = packageDoc.id.ToLowerInvariant();
                 foreach (var guid in binaryFileGuids) {
-                    var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+                    var path = AssetDatabase.GUIDToAssetPath(guid).ToLowerInvariant();
                     if (path.StartsWith("assets/airshippackages/" + scopedId + "/")) {
                         paths.Add(path);
                     }
@@ -602,7 +650,7 @@ namespace Editor.Packages {
 
             var urls = deploymentDto.urls;
             var split = packageDoc.id.Split("/");
-            var orgScope = split[0].ToLower();
+            var orgScope = split[0].ToLowerInvariant();
             var packageIdOnly = split[1];
             uploadSizeBytes = 0;
             var uploadList = new List<IEnumerator>() {
@@ -824,10 +872,10 @@ namespace Editor.Packages {
             Debug.Log($"Downloading {packageId}...");
             var gameConfig = GameConfig.Load();
 
-            codeVersion = codeVersion.ToLower().Replace("v", "");
+            codeVersion = codeVersion.ToLowerInvariant().Replace("v", "");
 
             // Source.zip
-            var url = $"{gameCdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var url = $"{gameCdnUrl}/package/{packageId.ToLowerInvariant()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
                 Path.Join("bundles", "temp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {

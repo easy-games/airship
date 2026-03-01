@@ -381,7 +381,7 @@ namespace Code.Bootstrap {
 
             List<AirshipPackage> packages = new();
             foreach (var packageDoc in startupConfig.packages) {
-                if (packageDoc.id.ToLower() == "@easy/corematerials") {
+                if (packageDoc.id.ToLowerInvariant() == "@easy/corematerials") {
                     continue;
                 }
 

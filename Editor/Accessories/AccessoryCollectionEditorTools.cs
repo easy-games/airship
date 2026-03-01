@@ -315,7 +315,7 @@ public class AccessoryCollectionTools {
 
     //Guess the avatar slot based on the name
     private static AccessorySlot GetSlot(string name, bool skinnedMesh){
-        string lower = name.ToLower().Replace("_", "").Replace(" ", "");
+        string lower = name.ToLowerInvariant().Replace("_", "").Replace(" ", "");
 
         //TODO: For non skinned meshes I need to evaulate if it is a Left or Right version of things like hands and feet
 

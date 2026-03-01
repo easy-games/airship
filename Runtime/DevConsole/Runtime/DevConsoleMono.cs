@@ -64,6 +64,7 @@ namespace Airship.DevConsole
         private const int MaxLogTextSize = 35;
         private const int CommandHistoryLength = 10;
         private const int MaxCachedEnumTypes = 6;
+        private const int MaxBufferedUnityLogs = 100;
         private const float FpsUpdateRate = 4f;
         private const float StatUpdateRate = 0.1f;
         private const int StatDefaultFontSize = 18;
@@ -228,6 +229,23 @@ namespace Airship.DevConsole
         private bool _init = false;
 
         public bool loggingEnabled = true;
+        private bool _isLogCallbackRegistered = false;
+        private bool _isSceneChangedRegistered = false;
+
+        private struct BufferedUnityLog {
+            public LogType type;
+            public string logString;
+            public string stackTrace;
+            public string time;
+            public long utcTicks;
+            public bool prepend;
+        }
+
+        private readonly object _bufferedUnityLogLock = new();
+        private readonly Dictionary<LogContext, List<BufferedUnityLog>> _bufferedUnityLogs = new() {
+            { LogContext.Client, new(MaxBufferedUnityLogs) },
+            { LogContext.Server, new(MaxBufferedUnityLogs) }
+        };
 
         #region Input fields
 
@@ -568,21 +586,14 @@ namespace Airship.DevConsole
         /// <summary>
         ///     Enable the dev console.
         /// </summary>
-        internal void EnableConsole()
-        {
+        internal void EnableConsole() {
             if (!_init && ConsoleIsEnabled) {
                 return;
             }
             if (!RunCore.IsClient()) return;
             // if (true) return;
-
-            Application.logMessageReceivedThreaded += OnLogMessageCallback;
-
-            SceneManager.activeSceneChanged += (current, next) => {
-                if (next.name == "MainMenu") {
-                    this.loggingEnabled = true;
-                }
-            };
+            SetLogCallbackRegistration(this.loggingEnabled);
+            SetSceneChangedRegistration(true);
 
             ClearConsole();
             InputText = string.Empty;
@@ -597,15 +608,12 @@ namespace Airship.DevConsole
         /// <summary>
         ///     Disable the dev console.
         /// </summary>
-        internal void DisableConsole()
-        {
-            if (!_init && !ConsoleIsEnabled)
-            {
+        internal void DisableConsole() {
+            if (!_init && !ConsoleIsEnabled) {
                 return;
             }
 
-            if (ConsoleIsShowing)
-            {
+            if (ConsoleIsShowing) {
                 CloseConsole();
             }
             _dynamicTransform.anchoredPosition = _initPosition;
@@ -613,7 +621,8 @@ namespace Airship.DevConsole
             _commandHistory.Clear();
             _cacheEnumTypes.Clear();
             ClearConsole();
-            // Application.logMessageReceivedThreaded -= OnLogMessageReceived;
+            SetLogCallbackRegistration(false);
+            SetSceneChangedRegistration(false);
             ConsoleIsEnabled = false;
             enabled = false;
 
@@ -645,6 +654,7 @@ namespace Airship.DevConsole
             ConsoleIsShowing = true;
             this._inputField.gameObject.SetActive(true);
             _focusInputField = true;
+            FlushBufferedUnityLogs();
 
             if (this.firstOpen) {
                 this.firstOpen = false;
@@ -721,6 +731,7 @@ namespace Airship.DevConsole
         internal void ClearConsole() {
             ClearConsole(LogContext.Client);
             ClearConsole(LogContext.Server);
+            ClearBufferedUnityLogs();
         }
 
         public void ClearActiveConsoleContext() {
@@ -1219,45 +1230,20 @@ namespace Airship.DevConsole
         /// <param name="_"></param>
         /// <param name="type"></param>
         public void OnLogMessageReceived(string logString, string stackTrace, LogType type, LogContext context = LogContext.Client, string time = "", bool prepend = false) {
-            if (!this.loggingEnabled) return;
+            if (!this.loggingEnabled) {
+                return;
+            }
 
-            if (string.IsNullOrEmpty(time)) {
-                time = DateTime.Now.ToString("HH:mm:ss");
+            if (!ShouldDisplayLogType(type)) {
+                return;
             }
-            switch (type)
-            {
-                case LogType.Log:
-                    if (!_displayUnityLogs)
-                    {
-                        return;
-                    }
-                    Log($"({time}) <b>Log:</b> {logString}", context, prepend);
-                    break;
-                case LogType.Error:
-                    if (!_displayUnityErrors)
-                    {
-                        return;
-                    }
-                    Log($"({time}) <color={ErrorColour}><b>Error:</b> </color>{logString}", context, prepend);
-                    break;
-                case LogType.Exception:
-                    if (!_displayUnityExceptions)
-                    {
-                        return;
-                    }
-                    Log($"({time}) <color={ErrorColour}><b>Exception:</b> </color>{logString} {stackTrace}", context, prepend);
-                    break;
-                case LogType.Warning:
-                    if (!_displayUnityWarnings)
-                    {
-                        return;
-                    }
-                    Log($"({time}) <color={WarningColour}><b>Warning:</b> </color>{logString}", context, prepend);
-                    break;
-                default:
-                    Log($"({time}) <b>Log:</b> {logString}", context, prepend);
-                    break;
+
+            if (!ConsoleIsShowing) {
+                BufferUnityLog(logString, stackTrace, type, context, time, prepend);
+                return;
             }
+
+            AppendUnityLog(logString, stackTrace, type, context, time, prepend);
         }
 
         #endregion
@@ -1665,9 +1651,166 @@ namespace Airship.DevConsole
         }
         #endif
 
-        private void OnDestroy()
-        {
+        private void OnDestroy() {
             // SavePreferences();
+            SetLogCallbackRegistration(false);
+            SetSceneChangedRegistration(false);
+        }
+
+        private void OnActiveSceneChanged(Scene current, Scene next) {
+            if (next.name == "MainMenu") {
+                this.loggingEnabled = true;
+                if (ConsoleIsEnabled) {
+                    SetLogCallbackRegistration(true);
+                }
+            }
+        }
+
+        private bool ShouldDisplayLogType(LogType type) {
+            switch (type) {
+                case LogType.Log:
+                    return _displayUnityLogs;
+                case LogType.Error:
+                    return _displayUnityErrors;
+                case LogType.Exception:
+                    return _displayUnityExceptions;
+                case LogType.Warning:
+                    return _displayUnityWarnings;
+                default:
+                    return true;
+            }
+        }
+
+        private void AppendUnityLog(string logString, string stackTrace, LogType type, LogContext context, string time, bool prepend) {
+            string resolvedTime = string.IsNullOrEmpty(time)
+                ? DateTime.Now.ToString("HH:mm:ss")
+                : time;
+
+            switch (type) {
+                case LogType.Log:
+                    Log($"({resolvedTime}) <b>Log:</b> {logString}", context, prepend);
+                    break;
+                case LogType.Error:
+                    Log($"({resolvedTime}) <color={ErrorColour}><b>Error:</b> </color>{logString}", context, prepend);
+                    break;
+                case LogType.Exception:
+                    Log($"({resolvedTime}) <color={ErrorColour}><b>Exception:</b> </color>{logString} {stackTrace}", context, prepend);
+                    break;
+                case LogType.Warning:
+                    Log($"({resolvedTime}) <color={WarningColour}><b>Warning:</b> </color>{logString}", context, prepend);
+                    break;
+                default:
+                    Log($"({resolvedTime}) <b>Log:</b> {logString}", context, prepend);
+                    break;
+            }
+        }
+
+        private void BufferUnityLog(string logString, string stackTrace, LogType type, LogContext context, string time, bool prepend) {
+            lock (_bufferedUnityLogLock) {
+                List<BufferedUnityLog> list = _bufferedUnityLogs[context];
+                if (list.Count >= MaxBufferedUnityLogs) {
+                    list.RemoveAt(0);
+                }
+
+                list.Add(new BufferedUnityLog {
+                    type = type,
+                    logString = logString,
+                    stackTrace = stackTrace,
+                    time = time,
+                    utcTicks = string.IsNullOrEmpty(time) ? DateTime.UtcNow.Ticks : 0,
+                    prepend = prepend
+                });
+            }
+        }
+
+        private void FlushBufferedUnityLogs() {
+            List<BufferedUnityLog> clientLogs;
+            List<BufferedUnityLog> serverLogs;
+            lock (_bufferedUnityLogLock) {
+                clientLogs = new List<BufferedUnityLog>(_bufferedUnityLogs[LogContext.Client]);
+                serverLogs = new List<BufferedUnityLog>(_bufferedUnityLogs[LogContext.Server]);
+                _bufferedUnityLogs[LogContext.Client].Clear();
+                _bufferedUnityLogs[LogContext.Server].Clear();
+            }
+
+            foreach (var entry in clientLogs) {
+                AppendUnityLog(
+                    entry.logString,
+                    entry.stackTrace,
+                    entry.type,
+                    LogContext.Client,
+                    ResolveBufferedLogTime(entry),
+                    entry.prepend
+                );
+            }
+
+            foreach (var entry in serverLogs) {
+                AppendUnityLog(
+                    entry.logString,
+                    entry.stackTrace,
+                    entry.type,
+                    LogContext.Server,
+                    ResolveBufferedLogTime(entry),
+                    entry.prepend
+                );
+            }
+        }
+
+        private string ResolveBufferedLogTime(BufferedUnityLog entry) {
+            if (!string.IsNullOrEmpty(entry.time)) {
+                return entry.time;
+            }
+
+            if (entry.utcTicks <= 0) {
+                return DateTime.Now.ToString("HH:mm:ss");
+            }
+
+            return new DateTime(entry.utcTicks, DateTimeKind.Utc).ToLocalTime().ToString("HH:mm:ss");
+        }
+
+        private void ClearBufferedUnityLogs() {
+            lock (_bufferedUnityLogLock) {
+                _bufferedUnityLogs[LogContext.Client].Clear();
+                _bufferedUnityLogs[LogContext.Server].Clear();
+            }
+        }
+
+        private void SetLogCallbackRegistration(bool register) {
+            if (register) {
+                if (_isLogCallbackRegistered) {
+                    return;
+                }
+
+                Application.logMessageReceivedThreaded += OnLogMessageCallback;
+                _isLogCallbackRegistered = true;
+                return;
+            }
+
+            if (!_isLogCallbackRegistered) {
+                return;
+            }
+
+            Application.logMessageReceivedThreaded -= OnLogMessageCallback;
+            _isLogCallbackRegistered = false;
+        }
+
+        private void SetSceneChangedRegistration(bool register) {
+            if (register) {
+                if (_isSceneChangedRegistered) {
+                    return;
+                }
+
+                SceneManager.activeSceneChanged += OnActiveSceneChanged;
+                _isSceneChangedRegistered = true;
+                return;
+            }
+
+            if (!_isSceneChangedRegistered) {
+                return;
+            }
+
+            SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+            _isSceneChangedRegistered = false;
         }
 
         #endregion
@@ -1784,11 +1927,15 @@ namespace Airship.DevConsole
 
             AddCommand(Command.Create("enable", "", "Enables console logging. Console logging may cause lag.", () => {
                 this.loggingEnabled = true;
+                if (ConsoleIsEnabled) {
+                    SetLogCallbackRegistration(true);
+                }
                 this.Log("<color=green>Console logging has been enabled.</color> Disable by typing \"disable\"");
             }));
 
             AddCommand(Command.Create("disable", "", "Disables console logging", () => {
                 this.loggingEnabled = false;
+                SetLogCallbackRegistration(false);
                 this.Log("<color=red>Console logging has been disabled.</color>");
             }));
 

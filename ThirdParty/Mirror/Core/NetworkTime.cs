@@ -30,6 +30,16 @@ namespace Mirror
 
         static ExponentialMovingAverage _rtt = new ExponentialMovingAverage(PingWindowSize);
 
+        // Packet loss tracking (client-side)
+        static ushort _pingSequenceNumber; // Last sequence number sent to the server in the client PING message.
+        static ushort _receivedSeqNumber; // highest server pong seq number received on client
+        static uint   _receivedSeqMask; // bitmask of if the 32 seq numbers before _serverLastSeqNum were received by the client
+
+        // Exposed loss value (0.0–1.0), updated on every received pong. Only available on client.
+        internal static float clientToServerLoss { get; private set; }
+        // Exposed loss value (0.0–1.0), updated on every received pong. Only available on client.
+        internal static float serverToClientLoss { get; private set; }
+
         /// <summary>Returns double precision clock time _in this system_, unaffected by the network.</summary>
 #if UNITY_2020_3_OR_NEWER
         public static double localTime
@@ -132,6 +142,11 @@ namespace Mirror
             PingInterval = DefaultPingInterval;
             lastPingTime = 0;
             _rtt = new ExponentialMovingAverage(PingWindowSize);
+            _pingSequenceNumber    = 0;
+            _receivedSeqNumber = 0;
+            _receivedSeqMask = 0;
+            clientToServerLoss = 0;
+            serverToClientLoss = 0;
 #if !UNITY_2020_3_OR_NEWER
             stopwatch.Restart();
 #endif
@@ -142,6 +157,7 @@ namespace Mirror
             // localTime (double) instead of Time.time for accuracy over days
             if (localTime >= lastPingTime + PingInterval)
                 SendPing();
+            // loss is computed per-pong in OnClientPong; no timer needed here
         }
 
         // Separate method so we can call it from NetworkClient directly.
@@ -149,10 +165,11 @@ namespace Mirror
         {
             // send raw predicted time without the offset applied yet.
             // we then apply the offset to it after.
-            NetworkPingMessage pingMessage = new NetworkPingMessage
-            (
+            _pingSequenceNumber++;
+            NetworkPingMessageV2 pingMessage = new NetworkPingMessageV2(
                 localTime,
-                predictedTime
+                predictedTime,
+                sequenceNumber: _pingSequenceNumber
             );
             NetworkClient.Send(pingMessage, Channels.Unreliable);
             lastPingTime = localTime;
@@ -176,12 +193,37 @@ namespace Mirror
             double adjustedError = localTime - message.predictedTimeAdjusted;
             // Debug.Log($"[Server] unadjustedError:{(unadjustedError*1000):F1}ms adjustedError:{(adjustedError*1000):F1}ms");
 
-            // Debug.LogError($"OnServerPing conn:{conn}");
-            NetworkPongMessage pongMessage = new NetworkPongMessage
-            (
+            NetworkPongMessage pongMessage = new NetworkPongMessage(
                 message.localTime,
                 unadjustedError,
                 adjustedError
+            );
+            conn.Send(pongMessage, Channels.Unreliable);
+        }
+
+        internal static void OnServerPingV2(NetworkConnectionToClient conn, NetworkPingMessageV2 message) {
+            // calculate the prediction offset that the client needs to apply to unadjusted time to reach server time.
+            // this will be sent back to client for corrections.
+            double unadjustedError = localTime - message.localTime;
+
+            // to see how well the client's final prediction worked, compare with adjusted time.
+            // this is purely for debugging.
+            // >0 means: server is ... seconds ahead of client's prediction (good if small)
+            // <0 means: server is ... seconds behind client's prediction.
+            //           in other words, client is predicting too far ahead (not good)
+            double adjustedError = localTime - message.predictedTimeAdjusted;
+            // Debug.Log($"[Server] unadjustedError:{(unadjustedError*1000):F1}ms adjustedError:{(adjustedError*1000):F1}ms");
+
+            UpdateSequenceMask(ref message.sequenceNumber, ref conn.receivedSeqNumber, ref conn.receivedSeqMask);
+            
+            conn.pongSequenceNumber++;
+            NetworkPongMessageV2 pongMessage = new NetworkPongMessageV2(
+                message.localTime,
+                unadjustedError,
+                adjustedError,
+                sequenceNumber:     conn.pongSequenceNumber,
+                receivedSeqNumber:  conn.receivedSeqNumber,
+                receivedSeqMask: conn.receivedSeqMask
             );
             conn.Send(pongMessage, Channels.Unreliable);
         }
@@ -203,6 +245,76 @@ namespace Mirror
             _predictionErrorUnadjusted.Add(message.predictionErrorUnadjusted);
             predictionErrorAdjusted = message.predictionErrorAdjusted;
             // Debug.Log($"[Client] predictionError avg={(_predictionErrorUnadjusted.Value*1000):F1} ms");
+        }
+
+        internal static void OnClientPongV2(NetworkPongMessageV2 message) {
+            // prevent attackers from sending timestamps which are in the future
+            if (message.localTime > localTime) return;
+
+            // how long did this message take to come back
+            double newRtt = localTime - message.localTime;
+            _rtt.Add(newRtt);
+
+            // feed unadjusted prediction error into our exponential moving average
+            // store adjusted prediction error for debug / GUI purposes
+            _predictionErrorUnadjusted.Add(message.predictionErrorUnadjusted);
+            predictionErrorAdjusted = message.predictionErrorAdjusted;
+            // Debug.Log($"[Client] predictionError avg={(_predictionErrorUnadjusted.Value*1000):F1} ms");
+
+            UpdateSequenceMask(ref message.sequenceNumber, ref _receivedSeqNumber, ref _receivedSeqMask);
+
+            // S->C loss: the current seq num as 1 received (+1), and each set bit in the
+            // mask represents one more received packet from the previous 32.
+            int sRecv = 1 + BitCount(_receivedSeqMask);
+            int sWin  = Math.Min((int)_receivedSeqNumber, 33);
+            serverToClientLoss = sWin > 0 ? Mathf.Clamp01((float)(sWin - sRecv) / sWin) : 0;
+
+            // C->S loss: same calculation as above but using the server data.
+            int cRecv = 1 + BitCount(message.receivedSeqMask);
+            int cWin  = Math.Min((int)message.receivedSeqNumber, 33);
+            clientToServerLoss = cWin > 0 ? Mathf.Clamp01((float)(cWin - cRecv) / cWin) : 0;
+        }
+
+        // Hamming weight (popcount): counts the number of 1-bits in a 32-bit value.
+        // Uses the standard SWAR (SIMD Within A Register) bit-parallel approach:
+        static int BitCount(uint v)
+        {
+            v = v - ((v >> 1) & 0x55555555u);
+            v = (v & 0x33333333u) + ((v >> 2) & 0x33333333u);
+            return (int)((((v + (v >> 4)) & 0x0F0F0F0Fu) * 0x01010101u) >> 24);
+        }
+
+        // Updates the sequence mask and lastSequenceNumber to reflect an updated received sequence number
+        internal static void UpdateSequenceMask(ref ushort sequenceNumber, ref ushort lastSequenceNumber, ref uint seqMask) {
+            // Signed subtraction on ushorts correctly handles wraparound at 65535->0.
+            short clientDelta = (short)(sequenceNumber - lastSequenceNumber);
+            if (clientDelta > 0) // This sequence number is newer than the most recent one we received.
+            {
+                // Shift the history window forward by delta value then OR in bit delta-1 to record that
+                // the last sequence value was received.
+                // (ex. Delta of 3 will mean that we shift the seqMask by 3, then we flip the first bit of the
+                // 3 new zeros since we still need to record that received the seq we base the delta on. We will then
+                // have 2 zeros representing the two missed packets up to the current sequence num. The current seq number
+                // will not be represented in the mask until we receive a new seq num.)
+                if (clientDelta < 32) {
+                    seqMask = (seqMask << clientDelta) | (1u << (clientDelta - 1));
+                } else {
+                    // gap too large; all prior history falls outside the 32-bit window. We'll just zero it out
+                    // since we've lost everything for the entire period so far.
+                    seqMask = 0;
+                }
+                lastSequenceNumber = sequenceNumber;
+            }
+            else if (clientDelta < 0)  // Out-of-order arrival: this seq is older than our most recently received num
+            {
+                // We'll want to correct our bit field for that num since we did actually receive the seq value now.
+                // Convert the negative delta to a zero-based bit index:
+                //   delta=-1 -> bit 0 (one slot behind current seq num)
+                //   delta=-2 -> bit 1 (two slots behind), etc.
+                int bit = -clientDelta - 1;
+                if (bit < 32) seqMask |= 1u << bit;
+            }
+            // delta == 0 is a duplicate; ignore.
         }
 
         // server rtt calculation //////////////////////////////////////////////

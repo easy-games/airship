@@ -124,13 +124,23 @@ public class AuthManager {
         redirectUri = "gg.easy.airship:/oauth2";
 #endif
 #endif
+		
+#if UNITY_ANDROID && !UNITY_EDITOR
+#if AIRSHIP_STAGING
+		clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
+		clientSecret = null;
+#else
+        clientId = "457451560440-fvhufuvt3skas9m046jqin0l10h8uaph.apps.googleusercontent.com";
+		clientSecret = null;
+#endif
+#endif
 
         var auth = new GoogleAuth(new AuthorizationCodeFlow.Configuration() {
             clientId = clientId,
-
+        
             // Why we include this: https://stackoverflow.com/a/73779731
             clientSecret = clientSecret,
-
+        
             redirectUri = redirectUri,
             scope = "openid email profile",
         });
@@ -139,11 +149,8 @@ public class AuthManager {
 		GoogleSignIn.Configuration ??= new GoogleSignInConfiguration() {
 			RequestEmail = true,
 			RequestProfile = true,
-			RequestAuthCode = true,
+			RequestIdToken = true,
 			WebClientId = clientId,
-#if UNITY_EDITOR || UNITY_STANDALONE
-			ClientSecret = clientSecret,
-#endif
 		};
 #endif
         
@@ -153,14 +160,15 @@ public class AuthManager {
 
         var accessToken = "";
         
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
 		var (user, err) = await AuthWithGoogleAndroid();
 		if (err != null) {
 			return (false, err);
 		}
 
-		var accessTokenRes = await auth.ExchangeCodeForAccessTokenAsync($"http://localhost?code={user.AuthCode}");
-		accessToken = accessTokenRes.accessToken;
+		// ID token can also be used for sign-in with firebase. AuthWithGoogleAndroid will return this
+		// instead so we don't have to exchange an auth code for an access token.
+		accessToken = user.IdToken;
 #else
         var crossPlatformBrowser = new CrossPlatformBrowser();
         var standaloneBrowser = new StandaloneBrowser();
@@ -195,7 +203,12 @@ public class AuthManager {
 #endif
         if (accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
-                postBody = "access_token=" + accessToken + "&providerId=google.com",
+	            #if UNITY_ANDROID && !UNITY_EDITOR
+	            // Android sign-in returns an ID token instead of an access token.
+	            postBody = "id_token=" + accessToken + "&providerId=google.com",
+	            #else
+	            postBody = "access_token=" + accessToken + "&providerId=google.com",
+	            #endif
                 requestUri = "http://localhost",
                 returnSecureToken = true
             };
