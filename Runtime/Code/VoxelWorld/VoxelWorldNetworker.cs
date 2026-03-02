@@ -9,7 +9,6 @@ using UnityEngine.Profiling;
 using VoxelWorldStuff;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
-using Debug = UnityEngine.Debug;
 
 public class VoxelWorldNetworker : NetworkBehaviour {
     [SerializeField] public VoxelWorld world;
@@ -20,6 +19,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
     private Stopwatch spawnTimer = new();
     private Stopwatch replicationTimer = new();
+    private Dictionary<int, int> clientVersions = new ();
 
     private void Awake() {
         if (!RunCore.IsServer()) {
@@ -33,7 +33,8 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             await Awaitable.NextFrameAsync();
         }
 
-        OnReadyCommand();
+        // Init this client on the server
+        OnReadyCommand(25);
     }
 
     [Command(requiresAuthority = false)]
@@ -45,8 +46,23 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         // SendAllChunks(client);
         StartCoroutine(SlowlySendChunks(connection, new List<Vector3Int>()));
     }
+    
+    [Command(requiresAuthority = false)]
+    public void OnReadyCommand(int clientVersion, NetworkConnectionToClient connection = null) {
+        // Save Client Version
+        if (connection != null) {
+            clientVersions[connection.connectionId] = clientVersion;
+        }
+            
+        if (RunCore.IsClient() && RunCore.IsServer()) {
+            // Running in shared editor
+            return;
+        }
+        // SendAllChunks(client);
+        StartCoroutine(SlowlySendChunks(connection, new List<Vector3Int>()));
+    }
 
-    private void SendAllChunks(NetworkConnectionToClient client = null) {
+    private void SendAllChunks(NetworkConnectionToClient connection = null) {
         // Send chunks
         List<Chunk> chunks = new(world.chunks.Count);
         List<Vector3Int> chunkPositions = new(world.chunks.Count);
@@ -58,8 +74,13 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             chunks.Add(chunk);
             chunkPositions.Add(pos);
         }
-
-        RpcWriteChunks(client, chunkPositions.ToArray(), chunks.ToArray(), true);
+        
+        // Use client version to determine which RPC to call
+        if (clientVersions.TryGetValue(connection.connectionId, out int userVersion) && userVersion >= 25) {
+            RpcWriteChunks(connection, chunkPositions.ToArray(), chunks.ToArray(), true);
+        } else {
+            RpcWriteChunks(connection, chunkPositions.ToArray(), chunks.ToArray());
+        }
     }
 
     private IEnumerator SlowlySendChunks(NetworkConnection connection, List<Vector3Int> skipChunks) {
@@ -68,6 +89,10 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         List<Vector3Int> packetPositions = new();
         List<Chunk> packetChunks = new();
         const int chunksPerFrame = 5;
+        bool newestVersion = false;
+        if (clientVersions.TryGetValue(connection.connectionId, out int userVersion) && userVersion >= 25) {
+            newestVersion = true;
+        }
         for (var i = 0; i < world.chunks.Count; i++) {
             var pos = keys[i];
             if (skipChunks.Contains(pos)) {
@@ -79,13 +104,23 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             sentPositions.Add(pos);
 
             if (i % chunksPerFrame == chunksPerFrame-1 || i == world.chunks.Count - 1) {
-                RpcWriteChunks(connection, packetPositions.ToArray(), packetChunks.ToArray(), false);
+                if (newestVersion) {
+                    RpcWriteChunks(connection, packetPositions.ToArray(), packetChunks.ToArray(), false);
+                } else {
+                    RpcWriteChunks(connection, packetPositions.ToArray(), packetChunks.ToArray());
+                }
+
                 packetPositions.Clear();
                 packetChunks.Clear();
                 yield return null;
             }
         }
-        RpcFinishedSendingWorld(connection);
+
+        if (newestVersion) {
+            RpcFinishedSendingAllChunks(connection);
+        } else {
+            RpcFinishedSendingWorld(connection);
+        }
     }
 
     public override void OnStartClient() {
@@ -126,6 +161,20 @@ public class VoxelWorldNetworker : NetworkBehaviour {
     [TargetRpc]
     public void RpcWriteChunks(NetworkConnection connection, Vector3Int[] positions, Chunk[] chunks, bool containsAllChunks) {
         Profiler.BeginSample("TargetWriteChunkRpcRpcWriteChunks");
+        WriteChunks(positions, chunks, containsAllChunks);
+        Profiler.EndSample();
+    }
+
+    [TargetRpc]
+    [Obsolete("Use overload with 'ContainsAllChunks' bool", false)]
+    public void RpcWriteChunks(
+        NetworkConnection conn,
+        Vector3Int[] positions,
+        Chunk[] chunks) {
+        RpcWriteChunks(conn, positions, chunks, true);
+    }
+
+    private void WriteChunks(Vector3Int[] positions, Chunk[] chunks, bool containsAllChunks) {
         // Needed for shared mode to ensure that processed chunks do not stay in the HashSet after replication.
         world.ClearProcessingMeshChunks();
         for (var i = 0; i < positions.Length; i++) {
@@ -138,12 +187,21 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             world.RegenerateAllMeshes();
             world.InvokeOnFinishedReplicatingChunksFromServer();
         }
+    }
 
-        Profiler.EndSample();
+    // Remove when all clients are playerVersion 25 or above
+    [TargetRpc]
+    [Obsolete("Use 'RpcFinishedSendingAllChunks'", false)]
+    public void RpcFinishedSendingWorld(NetworkConnection conn) {
+        FinishedSendingAllChunks();
     }
 
     [TargetRpc]
-    public void RpcFinishedSendingWorld(NetworkConnection connection) {
+    public void RpcFinishedSendingAllChunks(NetworkConnection connection) {
+        FinishedSendingAllChunks();
+    }
+
+    private void FinishedSendingAllChunks() {
         world.renderingDisabled = false;
         Profiler.BeginSample("RpcFinishedSendingWorld.RegenMeshes");
         world.DeleteRenderedGameObjects();
@@ -152,4 +210,5 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         world.InvokeOnFinishedReplicatingChunksFromServer();
         // Debug.Log($"Finished chunk replication in {this.replicationTimer.ElapsedMilliseconds}ms");
     }
+
 }

@@ -7,7 +7,7 @@ using UnityEngine.Scripting;
 namespace Code {
     [LuauAPI][Preserve]
     public static class AirshipConst {
-        public const int playerVersion = 24;
+        public const int playerVersion = 25;
         public static readonly IReadOnlyList<string> playerFlags = new string[] {
             "SkipLoading",
             "LagCompCheckIdIsInt",
