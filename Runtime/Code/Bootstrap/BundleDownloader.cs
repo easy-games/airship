@@ -112,7 +112,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				}
 			}
 
-			// Download files
+			// Start download requests for asset bundles
 			var bundleIndex = 0;
 			this.totalDownload.Clear();
 			this.downloadProgress.Clear();
@@ -154,21 +154,25 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 						codeZipUrl = $"{cdnUrl}/package/{package.id.ToLowerInvariant()}/code/{package.codeVersion}/code.zip";
 					}
 
-					if (File.Exists(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"))) {
+					string codeZipPath = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
+					string codeDownloadSuccessPath = Path.Join(package.GetPersistentDataDirectory(),
+						"code_version_" + package.codeVersion + ".txt");
+
+					// Check if we already have this version cached on disk
+					if (File.Exists(codeDownloadSuccessPath) && File.Exists(codeZipPath)) {
 						// Debug.Log(package.id + " code.zip is cached. skipping.");
 						continue;
 					}
 
 					var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(codeZipUrl));
-					string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
-					if (File.Exists(path)) {
-						Debug.Log("Code.zip path already exists. Deleting before downloading... path: " + path);
-						File.Delete(path);
+					if (File.Exists(codeZipPath)) {
+						Debug.Log("Code.zip path already exists. Deleting before downloading... path: " + codeZipPath);
+						File.Delete(codeZipPath);
 					}
 
 					Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
 
-					request.downloadHandler = new DownloadHandlerFile(path);
+					request.downloadHandler = new DownloadHandlerFile(codeZipPath);
 					requests.Add(request.SendWebRequest());
 				}
 			}
