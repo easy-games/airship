@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Audio;
 using Object = UnityEngine.Object;
 
 internal static class AirshipObjectGUIInternal {
@@ -163,12 +164,11 @@ internal static class AirshipObjectGUIInternal {
 
     public static Object GetTargetObjectType(Object obj, Type type) {
         if (obj is Component co) return co;
-        if (obj is not GameObject go) return null;
-        if (typeof(Component).IsAssignableFrom(type)) {
+        if (obj is GameObject go && typeof(Component).IsAssignableFrom(type)) {
             return go.GetComponent(type);
         }
 
-        return go;
+        return obj;
     }
     
     public static Object DoObjectField(

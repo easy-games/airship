@@ -475,6 +475,7 @@ public static partial class AirshipEditorGUI {
                         if (objRef != null && consume && currentEvent.type == EventType.DragPerform) {
                             var lastElement = property.array.PushElement();
                             lastElement.objectReferenceValue = objRef;
+                            property.isModified = true;
                             property.serializedObject.ApplyModifiedProperties(); // ensure it's added as a new property
                         }
                     }
