@@ -7,6 +7,7 @@ using Adrenak.UniVoice.Networks;
 using Adrenak.UniVoice.Outputs;
 using Adrenak.UniVoice.Inputs;
 using Adrenak.UniVoice.Filters;
+using Code.Player;
 using Mirror;
 using Utils = Adrenak.UniVoice.Utils;
 
@@ -41,6 +42,8 @@ namespace Code.Voice {
         /// </summary>
         public static ClientSession<int> ClientSession { get; private set; }
 
+        private AudioForwarder audioForwarder;
+
 #pragma warning disable CS0414
         [SerializeField] bool useRNNoise4UnityIfAvailable = true;
 
@@ -60,6 +63,10 @@ namespace Code.Voice {
         private void Start() {
             if (RunCore.IsServer()) TrySetupServer();
             if (RunCore.IsClient()) TrySetupClient();
+        }
+
+        void OnDestroy() {
+            this.audioForwarder?.Dispose();
         }
         
         private void TrySetupServer() {
@@ -99,6 +106,16 @@ namespace Code.Voice {
             AudioServer.OnServerStop += () => {
                 Log("Server stopped");
             };
+
+            var serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
+            this.audioForwarder = AudioForwarder.Create(
+                connId => PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(connId)?.userId,
+                serverBootstrap != null ? serverBootstrap.organizationId : "",
+                serverBootstrap != null ? serverBootstrap.gameId : "",
+                serverBootstrap != null ? serverBootstrap.serverId : ""
+            );
+            AudioServer.OnAudioFrameReceived += this.audioForwarder.Send;
+
             return true;
         }
 
