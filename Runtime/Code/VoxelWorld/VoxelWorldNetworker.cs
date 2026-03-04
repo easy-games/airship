@@ -9,6 +9,7 @@ using UnityEngine.Profiling;
 using VoxelWorldStuff;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
+using Debug = UnityEngine.Debug;
 
 public class VoxelWorldNetworker : NetworkBehaviour {
     [SerializeField] public VoxelWorld world;
@@ -39,12 +40,16 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
     [Command(requiresAuthority = false)]
     public void OnReadyCommand(NetworkConnectionToClient connection = null) {
+        // Save Client Version
+        if (connection != null) {
+            clientVersions[connection.connectionId] = 24;
+        }
+        
         if (RunCore.IsClient() && RunCore.IsServer()) {
             // Running in shared editor
             return;
         }
-        // SendAllChunks(client);
-        StartCoroutine(SlowlySendChunks(connection, new List<Vector3Int>()));
+        SendAllChunks(connection);
     }
     
     [Command(requiresAuthority = false)]
@@ -171,7 +176,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         NetworkConnection conn,
         Vector3Int[] positions,
         Chunk[] chunks) {
-        RpcWriteChunks(conn, positions, chunks, true);
+        WriteChunks(positions, chunks, true);
     }
 
     private void WriteChunks(Vector3Int[] positions, Chunk[] chunks, bool containsAllChunks) {
