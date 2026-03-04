@@ -117,7 +117,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
                 packetPositions.Clear();
                 packetChunks.Clear();
-                yield return null;
+                yield return new WaitForSeconds(.05f);
             }
         }
 
