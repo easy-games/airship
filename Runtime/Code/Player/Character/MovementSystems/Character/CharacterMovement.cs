@@ -607,7 +607,7 @@ namespace Code.Player.Character.MovementSystems.Character {
 
             // Modify colliders size based on movement state
             var offsetExtent = movementSettings.colliderGroundOffset / 2;
-            currentCharacterHeight = currentMoveSnapshot.isCrouching
+            currentCharacterHeight = currentMoveSnapshot.state == CharacterState.Crouching
                 ? standingCharacterHeight * movementSettings.crouchHeightMultiplier
                 : standingCharacterHeight;
             characterHalfExtents = new Vector3(movementSettings.characterRadius,
