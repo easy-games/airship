@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using Adrenak.BRW;
+using Code.Platform.Shared;
 using UnityEngine;
 
 namespace Code.Voice {
@@ -31,9 +32,6 @@ namespace Code.Voice {
         const int AUDIO_HEADER_LEN = 22;
         const int MAX_STRING_LEN = 128;
         const float INIT_RESEND_SEC = 2f;
-        const string DEFAULT_HOST = "localhost";
-        const int DEFAULT_PORT = 3124;
-
         private readonly UdpClient udp;
         private readonly string host;
         private readonly int port;
@@ -63,13 +61,17 @@ namespace Code.Voice {
         }
 
         /// <summary>
-        /// Creates a forwarder. Uses AUDIO_FORWARDER_HOST / AUDIO_FORWARDER_PORT env vars,
-        /// defaulting to localhost:3124 for local development.
+        /// Creates a forwarder if voice moderation is enabled (see AirshipPlatformUrl).
+        /// Returns null when disabled.
         /// </summary>
         public static AudioForwarder Create(Func<int, string> resolveUserId, string orgId, string gameId, string serverId) {
-            var host = Environment.GetEnvironmentVariable("AUDIO_FORWARDER_HOST") ?? DEFAULT_HOST;
-            var portStr = Environment.GetEnvironmentVariable("AUDIO_FORWARDER_PORT");
-            var port = int.TryParse(portStr, out var p) ? p : DEFAULT_PORT;
+            if (!AirshipPlatformUrl.voiceModerationEnabled) {
+                Debug.Log("[AudioForwarder] Voice moderation disabled");
+                return null;
+            }
+
+            var host = AirshipPlatformUrl.moderationStreamHost;
+            var port = AirshipPlatformUrl.moderationStreamPort;
 
             Debug.Log($"[AudioForwarder] Forwarding to {host}:{port}");
             return new AudioForwarder(host, port, resolveUserId, orgId, gameId, serverId);

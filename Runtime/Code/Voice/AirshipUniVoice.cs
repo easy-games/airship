@@ -114,7 +114,8 @@ namespace Code.Voice {
                 serverBootstrap != null ? serverBootstrap.gameId : "",
                 serverBootstrap != null ? serverBootstrap.serverId : ""
             );
-            AudioServer.OnAudioFrameReceived += this.audioForwarder.Send;
+            if (this.audioForwarder != null)
+                AudioServer.OnAudioFrameReceived += this.audioForwarder.Send;
 
             return true;
         }

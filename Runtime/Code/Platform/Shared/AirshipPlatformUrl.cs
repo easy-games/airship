@@ -17,6 +17,9 @@ namespace Code.Platform.Shared {
         public static string cdn = "https://cdn-staging.easy.gg";
         public static string mainWeb = "https://staging.airship.gg";
         public static string firebaseApiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
+        public static bool voiceModerationEnabled = true;
+        public static string moderationStreamHost = "moderation-stream";
+        public static int moderationStreamPort = 3124;
     #else
         public static string gameCoordinatorSocket = "https://gc-edge-staging.easy.gg";
         public static string gameCoordinator = "https://api-staging.airship.gg/game-coordinator";
@@ -29,6 +32,9 @@ namespace Code.Platform.Shared {
         public static string cdn = "https://cdn-staging.easy.gg";
         public static string mainWeb = "https://staging.airship.gg";
         public static string firebaseApiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
+        public static bool voiceModerationEnabled = false;
+        public static string moderationStreamHost = "localhost";
+        public static int moderationStreamPort = 3124;
     #endif
 #else
 
@@ -47,6 +53,9 @@ namespace Code.Platform.Shared {
         public static string gameCdn = "https://gcdn.airship.gg";
         public static string mainWeb = "https://airship.gg";
         public static string firebaseApiKey = "AIzaSyAYw0C18Mt3wijT0ZHKGcS7zVdaPlR_sGI";
+        public static bool voiceModerationEnabled = true;
+        public static string moderationStreamHost = "moderation-stream";
+        public static int moderationStreamPort = 3124;
     #else
         public static string gameCoordinatorSocket = "https://gc-edge.airship.gg";
         public static string gameCoordinator = "https://api.airship.gg/game-coordinator";
@@ -59,6 +68,9 @@ namespace Code.Platform.Shared {
         public static string gameCdn = "https://gcdn.airship.gg";
         public static string mainWeb = "https://airship.gg";
         public static string firebaseApiKey = "AIzaSyAYw0C18Mt3wijT0ZHKGcS7zVdaPlR_sGI";
+        public static bool voiceModerationEnabled = false;
+        public static string moderationStreamHost = "localhost";
+        public static int moderationStreamPort = 3124;
     #endif
 #endif
     }
