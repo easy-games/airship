@@ -31,7 +31,9 @@ namespace Code.Voice {
         const byte VERSION = 1;
         const int AUDIO_HEADER_LEN = 22;
         const int MAX_STRING_LEN = 128;
-        const float INIT_RESEND_SEC = 2f;
+        const float INIT_RESEND_SEC = 10f;
+        const float SESSION_TIMEOUT_SEC = 75f; // moderation-stream is 60s
+        const float CLEANUP_INTERVAL_SEC = 30f;
         private readonly UdpClient udp;
         private readonly string host;
         private readonly int port;
@@ -49,6 +51,7 @@ namespace Code.Voice {
 
         readonly Dictionary<int, Session> sessions = new();
         static readonly System.Random rng = new();
+        float nextCleanupTime;
 
         AudioForwarder(string host, int port, Func<int, string> resolveUserId, string orgId, string gameId, string serverId) {
             udp = new UdpClient();
@@ -66,18 +69,18 @@ namespace Code.Voice {
         /// </summary>
         public static AudioForwarder Create(Func<int, string> resolveUserId, string orgId, string gameId, string serverId) {
             if (!AirshipPlatformUrl.voiceModerationEnabled) {
-                Debug.Log("[AudioForwarder] Voice moderation disabled");
                 return null;
             }
 
             var host = AirshipPlatformUrl.moderationStreamHost;
             var port = AirshipPlatformUrl.moderationStreamPort;
 
-            Debug.Log($"[AudioForwarder] Forwarding to {host}:{port}");
             return new AudioForwarder(host, port, resolveUserId, orgId, gameId, serverId);
         }
 
         public void Send(int mirrorConnId, byte[] messageData) {
+            CleanupStaleSessions();
+
             var userId = resolveUserId?.Invoke(mirrorConnId);
             if (string.IsNullOrEmpty(userId)) return;
 
@@ -154,6 +157,20 @@ namespace Code.Voice {
                 UdpSend(ms.ToArray());
             }
             return null;
+        }
+
+        void CleanupStaleSessions() {
+            var now = Time.unscaledTime;
+            if (now < nextCleanupTime) return;
+            nextCleanupTime = now + CLEANUP_INTERVAL_SEC;
+
+            var toRemove = new List<int>();
+            foreach (var kvp in sessions) {
+                if (now - kvp.Value.lastInitTime > SESSION_TIMEOUT_SEC)
+                    toRemove.Add(kvp.Key);
+            }
+            foreach (var key in toRemove)
+                sessions.Remove(key);
         }
 
         void UdpSend(byte[] packet) {
