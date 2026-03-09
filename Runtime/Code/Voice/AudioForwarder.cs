@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using Adrenak.BRW;
 using Code.Platform.Shared;
+using Mirror;
 using UnityEngine;
 
 namespace Code.Voice {
@@ -84,7 +84,7 @@ namespace Code.Voice {
             var userId = resolveUserId?.Invoke(mirrorConnId);
             if (string.IsNullOrEmpty(userId)) return;
 
-            // Parse UniVoice BRW wire format
+            // Parse UniVoice BRW wire format (must use BytesReader — data is serialized with BRW, not Mirror)
             var reader = new BytesReader(messageData);
             reader.ReadString();   // skip "AUDIO_FRAME" tag
             reader.ReadInt();      // skip sender peer ID
@@ -95,12 +95,12 @@ namespace Code.Voice {
             if (samples == null || samples.Length == 0) return;
 
             // Get or create session
-            if (!this.sessions.TryGetValue(mirrorConnId, out var session)) {
-                var buf = new byte[8];
-                rng.NextBytes(buf);
-                session = new Session { connId = BitConverter.ToUInt64(buf, 0) };
-                this.sessions[mirrorConnId] = session;
-            }
+                if (!this.sessions.TryGetValue(mirrorConnId, out var session)) {
+                    var buf = new byte[8];
+                    rng.NextBytes(buf);
+                    session = new Session { connId = BitConverter.ToUInt64(buf, 0) };
+                    this.sessions[mirrorConnId] = session;
+                }
 
             // Re-send init periodically so receiver always has context
             if (Time.unscaledTime - session.lastInitTime >= INIT_RESEND_SEC) {
@@ -117,18 +117,16 @@ namespace Code.Voice {
             if (session.initFailed) return;
 
             // Audio frame
-            var packet = new byte[AUDIO_HEADER_LEN + samples.Length];
-            using (var ms = new MemoryStream(packet))
-            using (var w = new BinaryWriter(ms)) {
-                w.Write(MSG_AUDIO);
-                w.Write(VERSION);
-                w.Write(session.connId);
-                w.Write(session.seq++);
-                w.Write(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            using (var w = NetworkWriterPool.Get()) {
+                w.WriteByte(MSG_AUDIO);
+                w.WriteByte(VERSION);
+                w.WriteULong(session.connId);
+                w.WriteUInt(session.seq++);
+                w.WriteLong(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                w.WriteBytes(samples, 0, samples.Length);
+                this.sessions[mirrorConnId] = session;
+                UdpSend(w.ToArray());
             }
-            Buffer.BlockCopy(samples, 0, packet, AUDIO_HEADER_LEN, samples.Length);
-            this.sessions[mirrorConnId] = session;
-            UdpSend(packet);
         }
 
         /// <returns>null on success, error message on failure</returns>
@@ -145,16 +143,15 @@ namespace Code.Voice {
                     return $"{name} is {len} bytes (max {MAX_STRING_LEN})";
             }
 
-            using (var ms = new MemoryStream())
-            using (var w = new BinaryWriter(ms)) {
-                w.Write(MSG_INIT);
-                w.Write(VERSION);
-                w.Write(connId);
-                w.Write(frequency);
-                w.Write(channelCount);
+            using (var w = NetworkWriterPool.Get()) {
+                w.WriteByte(MSG_INIT);
+                w.WriteByte(VERSION);
+                w.WriteULong(connId);
+                w.WriteInt(frequency);
+                w.WriteInt(channelCount);
                 foreach (var (_, value) in strings)
                     WriteNullTerminatedString(w, value);
-                UdpSend(ms.ToArray());
+                UdpSend(w.ToArray());
             }
             return null;
         }
@@ -181,10 +178,10 @@ namespace Code.Voice {
             }
         }
 
-        static void WriteNullTerminatedString(BinaryWriter w, string value) {
+        static void WriteNullTerminatedString(NetworkWriter w, string value) {
             var bytes = Encoding.UTF8.GetBytes(value ?? "");
-            w.Write(bytes);
-            w.Write((byte)0);
+            w.WriteBytes(bytes, 0, bytes.Length);
+            w.WriteByte(0);
         }
 
         public void Dispose() {
