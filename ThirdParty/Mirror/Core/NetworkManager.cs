@@ -1065,7 +1065,7 @@ namespace Mirror
         public static string GetAssetBundleScenePathFromName(string sceneName) {
             foreach (var loadedAssetBundle in AssetBundle.GetAllLoadedAssetBundles()) {
                 foreach (var scenePath in loadedAssetBundle.GetAllScenePaths()) {
-                    if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                    if (scenePath.ToLowerInvariant().EndsWith(sceneName.ToLowerInvariant() + ".unity")) {
                         return scenePath;
                     }
                 }
