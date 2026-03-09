@@ -108,14 +108,18 @@ namespace Code.Voice {
             };
 
             var serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
-            this.audioForwarder = AudioForwarder.Create(
-                connId => PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(connId)?.userId,
-                serverBootstrap != null ? serverBootstrap.organizationId : "",
-                serverBootstrap != null ? serverBootstrap.gameId : "",
-                serverBootstrap != null ? serverBootstrap.serverId : ""
-            );
-            if (this.audioForwarder != null)
-                AudioServer.OnAudioFrameReceived += this.audioForwarder.Send;
+            if (serverBootstrap != null) {
+                serverBootstrap.OnServerReady += () => {
+                    this.audioForwarder = AudioForwarder.Create(
+                        connId => PlayerManagerBridge.Instance.GetPlayerInfoByConnectionId(connId)?.userId,
+                        serverBootstrap.organizationId,
+                        serverBootstrap.gameId,
+                        serverBootstrap.serverId
+                    );
+                    if (this.audioForwarder != null)
+                        AudioServer.OnAudioFrameReceived += this.audioForwarder.Send;
+                };
+            }
 
             return true;
         }
