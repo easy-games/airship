@@ -551,7 +551,7 @@ namespace Mirror
             // Using ToLower will mean the hash will be the same for these 2 paths
             // Assets/Scenes/Forest.unity
             // Assets/Scenes/forest.unity
-            string scenePath = gameObject.scene.path.ToLower();
+            string scenePath = gameObject.scene.path.ToLowerInvariant();
 
             // get deterministic scene hash
             uint pathHash = (uint)scenePath.GetStableHashCode();
