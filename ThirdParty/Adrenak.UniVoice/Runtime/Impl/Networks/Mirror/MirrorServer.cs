@@ -31,6 +31,12 @@ namespace Adrenak.UniVoice.Networks {
 
         public event Action OnClientVoiceSettingsUpdated;
 
+        /// <summary>
+        /// Fired when an audio frame is received from a client.
+        /// Parameters: (senderConnectionId, rawMessageBytes)
+        /// </summary>
+        public event Action<int, byte[]> OnAudioFrameReceived;
+
         public List<int> ClientIDs { get; private set; }
 
         /// <summary>
@@ -122,7 +128,7 @@ namespace Adrenak.UniVoice.Networks {
             if (tag.Equals(MirrorMessageTags.AUDIO_FRAME)) {
                 // If muted on server discard audio frame
                 if (ServerMutedClientIDs.Contains(clientId)) return;
-                
+
                 // We start with all the peers except the one that's
                 // sent the audio 
                 var peersToForwardAudioTo = ClientIDs
@@ -156,6 +162,8 @@ namespace Adrenak.UniVoice.Networks {
                         }
                     });
                 }
+
+                OnAudioFrameReceived?.Invoke(clientId, message.data);
 
                 // We iterate through each recipient peer that the sender wants to send audio to, checking if
                 // they have muted the sender, before forwarding the audio to them.

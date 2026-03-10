@@ -217,6 +217,14 @@ namespace Mirror
             Position += size;
             return true;
         }
+        
+        // Write a span of bytes
+        public void WriteBytes(ReadOnlySpan<byte> source)
+        {
+            EnsureCapacity(Position + source.Length);
+            source.CopyTo(buffer.AsSpan(Position));
+            Position += source.Length;
+        }
 
         /// <summary>Writes any type that mirror supports. Uses weaver populated Writer(T).write.</summary>
         public void Write<T>(T value)
