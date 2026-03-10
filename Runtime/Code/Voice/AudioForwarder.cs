@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
-using Adrenak.BRW;
 using Code.Platform.Shared;
 using Mirror;
 using UnityEngine;
@@ -13,7 +12,7 @@ namespace Code.Voice {
     ///
     /// All packets: [0] u8 msg_type, [1] u8 version
     ///
-    /// Init (0x01 v1) — sent on first audio per user, re-sent every ~2s:
+    /// Init (0x01 v1) — sent on first audio per user, re-sent every ~5s:
     ///   [2..10]  u64    connection_id
     ///   [10..14] i32    frequency
     ///   [14..18] i32    channel_count
@@ -29,9 +28,8 @@ namespace Code.Voice {
         const byte MSG_INIT = 0x01;
         const byte MSG_AUDIO = 0x02;
         const byte VERSION = 1;
-        const int AUDIO_HEADER_LEN = 22;
         const int MAX_STRING_LEN = 128;
-        const float INIT_RESEND_SEC = 10f;
+        const float INIT_RESEND_SEC = 5f;
         const float SESSION_TIMEOUT_SEC = 75f; // moderation-stream is 60s
         const float CLEANUP_INTERVAL_SEC = 30f;
         private readonly UdpClient udp;
@@ -84,23 +82,36 @@ namespace Code.Voice {
             var userId = resolveUserId?.Invoke(mirrorConnId);
             if (string.IsNullOrEmpty(userId)) return;
 
-            // Parse UniVoice BRW wire format (must use BytesReader — data is serialized with BRW, not Mirror)
-            var reader = new BytesReader(messageData);
-            reader.ReadString();   // skip "AUDIO_FRAME" tag
-            reader.ReadInt();      // skip sender peer ID
-            reader.ReadLong();     // skip UniVoice timestamp
-            var frequency = reader.ReadInt();
-            var channelCount = reader.ReadInt();
-            var samples = reader.ReadByteArray();
-            if (samples == null || samples.Length == 0) return;
+            // Parse UniVoice BRW wire format
+            // We must account for format differences from default
+            // NetworkReaderPool methods (e.x. ReadString, ReadBytes)
+            // so we copy the implementation from BytesReader
+
+            int frequency;
+            int channelCount;
+            Span<byte> samples;
+
+            using (var reader = NetworkReaderPool.Get(messageData)) {
+                // skip "AUDIO_FRAME" tag
+                // Copy BytesReader.ReadString impl
+                Encoding.UTF8.GetString(reader.ReadBytes(reader.ReadInt()));
+                reader.ReadInt(); // skip sender peer ID
+                reader.ReadLong(); // skip UniVoice timestamp
+                frequency = reader.ReadInt();
+                channelCount = reader.ReadInt();
+                var size = reader.ReadInt();
+                samples = messageData.AsSpan(reader.Position, size);
+            }
+
+            if (samples.Length == 0) return;
 
             // Get or create session
-                if (!this.sessions.TryGetValue(mirrorConnId, out var session)) {
-                    var buf = new byte[8];
-                    rng.NextBytes(buf);
-                    session = new Session { connId = BitConverter.ToUInt64(buf, 0) };
-                    this.sessions[mirrorConnId] = session;
-                }
+            if (!this.sessions.TryGetValue(mirrorConnId, out var session)) {
+                var buf = new byte[8];
+                rng.NextBytes(buf);
+                session = new Session { connId = BitConverter.ToUInt64(buf, 0) };
+                this.sessions[mirrorConnId] = session;
+            }
 
             // Re-send init periodically so receiver always has context
             if (Time.unscaledTime - session.lastInitTime >= INIT_RESEND_SEC) {
@@ -123,7 +134,7 @@ namespace Code.Voice {
                 w.WriteULong(session.connId);
                 w.WriteUInt(session.seq++);
                 w.WriteLong(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-                w.WriteBytes(samples, 0, samples.Length);
+                w.WriteBytes(samples);
                 this.sessions[mirrorConnId] = session;
                 UdpSend(w.ToArray());
             }
@@ -171,11 +182,7 @@ namespace Code.Voice {
         }
 
         void UdpSend(byte[] packet) {
-            try {
-                udp.SendAsync(packet, packet.Length, host, port);
-            } catch (Exception e) {
-                Debug.LogError($"[AudioForwarder] {e.Message}");
-            }
+            udp.SendAsync(packet, packet.Length, host, port);
         }
 
         static void WriteNullTerminatedString(NetworkWriter w, string value) {
