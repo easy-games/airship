@@ -11,7 +11,7 @@ using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {
 #if UNITY_EDITOR
-    [MenuItem("Airship/Fix Missing UI")]
+    [MenuItem("Airship/Recompile C# Scripts")]
     public static void RequestMonoScriptRecompile() {
         UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
     }

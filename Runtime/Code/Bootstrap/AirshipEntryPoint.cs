@@ -6,6 +6,10 @@ using Code.Bootstrap;
 using Sentry;
 using UnityEngine;
 
+#if UNITY_IOS && AIRSHIP_PLAYER
+using SDK;
+#endif
+
 
 /// <summary>
 /// This singleton exists in the CoreScene, MainMenu, and Login scene.
@@ -35,6 +39,19 @@ public class AirshipEntryPoint : Singleton<AirshipEntryPoint> {
         } else {
             Debug.LogError("Missing private InternalSingletons prefab.");
         }
+
+#if UNITY_IOS && AIRSHIP_PLAYER
+        TikTokConfig config = new TikTokConfig(
+            "iOS_accessToken",
+            "6480534389",
+            "7613432807876345863",
+            "Android_accessToken",
+            "Android_appId",
+            "Android_tiktokAppId"
+        );
+        TikTokBusinessSDK.InitializeSdk(config);
+        TikTokBusinessSDK.StartTrack();
+#endif
 #endif
     }
 }
