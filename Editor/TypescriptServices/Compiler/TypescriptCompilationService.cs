@@ -563,9 +563,14 @@ using Object = UnityEngine.Object;
                 var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, versionTarget != null ? versionTarget.nodePath : "node.exe", command);
                 TypescriptLogService.LogInfo($"Running node command '{procStartInfo.FileName} {procStartInfo.Arguments}' at '{dir}'");
 #elif UNITY_EDITOR_LINUX
+                if (!AirshipNodeInstallService.hasNodeInstall) {
+                    TypescriptLogService.LogWarning($"No valid node install detected for user to run command '{command}'");
+                    Debug.LogWarning($"Could not start Typescript compiler as a Node install was not detected on your system.");
+                    return null;
+                }
+                
                 var nodeInstall = AirshipNodeInstallService.current;
                 var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, nodeInstall.nodePath, command);
-                
                 TypescriptLogService.LogInfo($"Running node command '{procStartInfo.FileName} {procStartInfo.Arguments}' at '{dir}'");
 #else
                 var versionTarget = AirshipNodeInstallService.current;

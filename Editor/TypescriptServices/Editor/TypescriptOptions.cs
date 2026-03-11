@@ -332,7 +332,7 @@ namespace Airship.Editor {
                 if (AirshipExternalCodeEditor.CurrentEditorPath != "")
                     EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
                 
-                if (TypescriptCompilationService.ShowDeveloperOptions && AirshipNodeInstallService.available.Length > 0) {
+                if (AirshipNodeInstallService.available.Length > 0) {
                     GUILayout.Space(5);
                     GUILayout.Label("Node Version", EditorStyles.boldLabel);
 
@@ -345,31 +345,41 @@ namespace Airship.Editor {
                         if (nodeVersion.Installs == null) continue;
                         nodeInstalls.AddRange(nodeVersion.Installs);
                     }
-
+                    
                     var installIndex = nodeInstalls.IndexOf(currentVersion);
-                    if (installIndex == -1) {
-                        
-                    }
-
                     EditorGUILayout.BeginHorizontal();
                     
                     var nextInstallIndex = EditorGUILayout.Popup("Node Version", 
                         installIndex, 
                         nodeInstalls.Select(installation => $"{installation.name}").ToArray());
-
+                    
                     if (installIndex != nextInstallIndex) {
                         Debug.Log($"Changed node install to {nextInstallIndex}");
                         AirshipNodeInstallService.SetNodeInstall(nodeInstalls[nextInstallIndex]);
                         TypescriptCompilationService.RestartCompilers();
                     }
-
-                    // if (GUILayout.Button("Custom...", GUILayout.Width(100))) {
-                    //     var path = EditorUtility.OpenFolderPanel("Locate node...", "", "");
-                    // }
                     
                     EditorGUILayout.EndHorizontal();
-                    
-                    if (currentVersion != null) EditorGUILayout.LabelField("Node Path", currentVersion.nodePath);
+
+                    if (currentVersion != null) {
+                        if (currentVersion is CustomNodeDistribution.Install customNodeInstall) {
+                            EditorGUILayout.BeginHorizontal();
+                            EditorGUILayout.LabelField("Node Path", customNodeInstall.nodePath);
+                            if (GUILayout.Button("Browse...", GUILayout.Width(100))) {
+                                var res = EditorUtility.OpenFolderPanel("Browse for node install location...", null, "");
+                                if (res != null && AirshipNodeInstallService.IsValidNodeDirectory(res)) {
+                                    customNodeInstall.binPath = res;
+                                } else if (res != null) {
+                                    EditorUtility.DisplayDialog("Node install not found",
+                                        $"Node binaries not found in directory '{res}'", "Ok");
+                                }
+                            }
+                            
+                            EditorGUILayout.EndHorizontal();
+                        } else {
+                            EditorGUILayout.LabelField("Node Path", currentVersion.nodePath);    
+                        }
+                    }
                 }
                 
                 GUILayout.Space(5);

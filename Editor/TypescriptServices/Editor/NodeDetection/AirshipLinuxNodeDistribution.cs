@@ -25,7 +25,8 @@ namespace Airship.Editor
             var installs = new List<IAirshipNodeVersion>();
             
             string[] paths = {
-                "/usr/bin",
+                "/usr/bin", // system binary
+                "/usr/local/bin", // local binary
             };
 
             foreach (var path in paths) {
@@ -35,7 +36,7 @@ namespace Airship.Editor
                 if (File.Exists(nodePath) && File.Exists(npmPath)) {
                     installs.Add(new AirshipLinuxNodeInstall() {
                         binPath = path,
-                        name = "node.js",
+                        name = "Node for Linux",
                     });
                 }
             }
