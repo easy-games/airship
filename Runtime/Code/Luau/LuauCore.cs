@@ -150,7 +150,7 @@ public partial class LuauCore : MonoBehaviour {
                 toStringCallback = Marshal.GetFunctionPointerForDelegate(toStringCallback_holder),
                 isObjectDestroyedCallback = Marshal.GetFunctionPointerForDelegate(isObjectDestroyedCallback_holder),
                 getUnityObjectNameCallback = Marshal.GetFunctionPointerForDelegate(getUnityObjectNameCallback_holder),
-                resolveRequirePathCallback = IntPtr.Zero,
+                resolveRequirePathCallback = IntPtr.Zero, // Keeping this null makes the plugin default to an internal path resolver
                 staticList = stringAddresses.AddrOfPinnedObject(),
                 staticListStrLen = stringLengthsHandle.AddrOfPinnedObject(),
                 staticCount = stringCount,
