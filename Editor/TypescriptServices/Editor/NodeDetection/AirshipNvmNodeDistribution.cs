@@ -71,6 +71,8 @@ namespace Airship.Editor
                 if (!Directory.Exists(nvmDir)) continue;
                 
                 var versions = Path.Join(nvmDir, "versions", "node");
+                if (!Directory.Exists(versions)) continue;
+                
                 foreach (var dir in Directory.GetDirectories(versions)) {
                     var node =  Path.Combine(dir, "bin", "node");
                     var npm =  Path.Combine(dir, "bin", "npm");
