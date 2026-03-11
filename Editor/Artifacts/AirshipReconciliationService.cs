@@ -100,8 +100,15 @@ namespace Airship.Editor {
             }
         }
 
-        internal static bool ReconcileMetadata(LuauMetadata componentMetadata, LuauMetadata scriptMetadata) { 
-            if (scriptMetadata == null) return false;
+        internal static bool ReconcileMetadata(
+            LuauMetadata componentMetadata, LuauMetadata scriptMetadata, 
+            SerializedProperty componentSerializedMetadata, SerializedProperty scriptSerializedMetadata) {
+            
+            
+            if (scriptMetadata == null) {
+                Debug.LogWarning($"no scriptMetadata for {componentMetadata.name}");
+                return false;
+            }
             componentMetadata.name = scriptMetadata.name;
             componentMetadata.decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
             
@@ -174,8 +181,7 @@ namespace Airship.Editor {
                     componentMetadata.properties.Remove(componentProperty);
                 }
             }
-
-
+            
 #if AIRSHIP_DEBUG
             if (additions.Count > 0 || modifications.Count > 0 || deletions.Count > 0) {
                 // Debug.Log($"<color=#b878f7>[Reconcile] ReconcileComponent(com) for '{component.name}'#{component.script.m_metadata?.name} - {additions.Count} adds, {modifications.Count} mods, {deletions.Count} deletions</color>");
@@ -214,7 +220,64 @@ namespace Airship.Editor {
             var scriptMetadata = scriptableObject.script.m_metadata;
             var componentMetadata = scriptableObject.metadata;
 
-            return ReconcileMetadata(componentMetadata, scriptMetadata);
+            var serializedComponent = new SerializedObject(scriptableObject);
+            var serializedScript = new SerializedObject(scriptableObject.script);
+
+            var componentMetadataSerialized = serializedComponent.FindProperty(nameof(AirshipScriptableObject.metadata));
+            var scriptMetadataSerialized = serializedScript.FindProperty(nameof(AirshipScript.m_metadata));
+            
+            var result = ReconcileMetadata(componentMetadata, scriptMetadata, componentMetadataSerialized, scriptMetadataSerialized);
+            return result;
+        }
+
+        internal static bool ReconcilePropertyOrder(AirshipComponent component) {
+            var serializedComponent = new SerializedObject(component);
+            var serializedMetadata = serializedComponent.FindProperty(nameof(AirshipComponent.metadata));
+
+            // for (var i = 0; i < serializedMetadata.Copy().arraySize; i++) {
+            //     var item =  serializedMetadata.GetArrayElementAtIndex(i);
+            //     var name = item.FindPropertyRelative("name").stringValue;
+            //
+            //     var destinationIndex = component.metadata.properties.FindIndex(f => f.name == name);
+            //     if (destinationIndex >= 0) {
+            //         serializedMetadata.MoveArrayElement(i, destinationIndex);
+            //     }
+            // }
+            
+            // probably need to do an inline sort here... ?
+            
+            if (serializedComponent.hasModifiedProperties) {
+                serializedComponent.ApplyModifiedProperties();
+                return true;
+            }
+
+            return false;
+        }
+        
+        internal static bool ReconcilePrefabInstance(AirshipComponent instance, AirshipComponent prefab) {
+            var scriptMetadata = prefab.script.m_metadata;
+            var instanceMetadata = instance.metadata;
+            var prefabMetadata = prefab.metadata;
+            //
+            //
+            
+            var serializedPrefabComponent = new SerializedObject(prefab);
+            var serializedInstanceComponent =  new SerializedObject(instance);
+
+            var prefabSerialiizedMetadata = serializedPrefabComponent.FindProperty(nameof(AirshipComponent.metadata));
+            var instanceSerializedMetadata = serializedInstanceComponent.FindProperty(nameof(AirshipComponent.metadata));
+            //
+            // var prefabProperties =
+            //     prefabSerialiizedMetadata.FindPropertyRelative(nameof(LuauMetadata.properties));
+            //
+            var instanceProperties =
+                instanceSerializedMetadata.FindPropertyRelative(nameof(LuauMetadata.properties));
+            
+            
+            // Ensure property order
+            prefabMetadata.SyncMetadataWith(scriptMetadata);
+            instanceMetadata.SyncMetadataWith(scriptMetadata);
+            return false;
         }
         
         /// <summary>
@@ -235,7 +298,16 @@ namespace Airship.Editor {
             var scriptMetadata = component.script.m_metadata;
             var componentMetadata = component.metadata;
             
-            ReconcileMetadata(componentMetadata, scriptMetadata);
+            var serializedComponent = new SerializedObject(component);
+            var serializedScript = new SerializedObject(component.script);
+
+            var componentMetadataSerialized = serializedComponent.FindProperty(nameof(AirshipComponent.metadata));
+            var scriptMetadataSerialized = serializedScript.FindProperty(nameof(AirshipScript.m_metadata));
+            
+            ReconcileMetadata(componentMetadata, scriptMetadata, componentMetadataSerialized, scriptMetadataSerialized);
+            // if (serializedComponent.hasModifiedProperties) {
+            //     serializedComponent.ApplyModifiedProperties();
+            // }
             
             // Add required components
             var requireComponents = scriptMetadata.FindClassDecorators("RequireComponent");
@@ -348,8 +420,18 @@ namespace Airship.Editor {
             // ... then we can force a reconciliation at that point to ensure the data is up-to-date.
 
             if (script == null) return false;
-            
+
+            // if (AirshipLocalArtifactDatabase.instance.TryGetScriptAssetData(script, out var scriptAssetData)) {
+            //     scriptAssetData.metadata.
+            // }
+
+            AirshipLocalArtifactDatabase.instance.FindPrefabsWithScript(script);
             if (!reconcileList.TryGetValue(script.assetPath, out var componentSet)) return false;
+            
+#if AIRSHIP_INTERNAL
+            Debug.Log($"Reconcile attached prefabs to scriptPath {script.assetPath} sizeof {componentSet.Count}");
+#endif
+            
             foreach (var component in componentSet) {
                 if (!component) continue;
                 component.ReconcileMetadata(ReconcileSource.ForceReconcile, script.m_metadata);
@@ -420,14 +502,6 @@ namespace Airship.Editor {
                 components.Add(componentData);
                 artifactData.Modify();
             }
-            
-            // // Hash mismatch
-            // if (!string.IsNullOrEmpty(component.componentHash) && scriptData.HasSameHashAs(componentData) && scriptData.IsNotSameHashAsComponent(component)) {
-            //     Debug.Log($"[Reconcile] Queued reconcile fpr {component.componentHash}");
-            //     OnComponentQueueReconcile(component);
-            //     status = ReconcileStatus.ReconcileWasQueued;
-            //     return true;
-            // }
 
             var reconciled = ReconcileComponent(component);
             // Version mismatch
@@ -496,9 +570,8 @@ namespace Airship.Editor {
                         // if successful, we can determine whether or not we'll reconcile the instance component
                         
                         switch (result) {
-                            // Once we're aware the original is updated, reconcile the instance copy!
                             case ReconcileStatus.Reconciled: {
-                                ReconcileComponent(component);
+                                ReconcilePrefabInstance(component, prefabOriginalComponent);
                                 break;
                             }
                             case ReconcileStatus.ReconcileWasQueued:

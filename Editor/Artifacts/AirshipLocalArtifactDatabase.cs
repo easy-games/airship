@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;
+using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -132,6 +133,36 @@ namespace Airship.Editor {
             return item;
         }
 
+        // internal bool TryGetPrefabComponents(AirshipScript script, out ComponentData[] assetData) {
+        //     var componentDatas = new List<ComponentData>();
+        //     
+        //     foreach (var component in components) {
+        //         if (component.script != script.assetPath || string.IsNullOrEmpty(component.asset)) continue;
+        //         componentDatas.Add(component);
+        //     }
+        //     
+        //     assetData = componentDatas.ToArray();
+        //     return componentDatas.Count > 0;
+        // }
+
+        internal void FindPrefabsWithScript(AirshipScript script) {
+            SearchService.Request($"prefab:any t:AirshipComponent airshipcomponent.script=\"{script.assetPath}\" a:Assets",
+                (context, items) => {
+                    foreach (var item in items) {
+                        if (item.data is GlobalObjectId gameObject) {
+                            var assetPath = AssetDatabase.GetAssetPath(GlobalObjectId.GlobalObjectIdentifierToInstanceIDSlow(gameObject));
+                            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+                            
+                            var matchingComponents = asset.gameObject.GetAirshipComponents(script.GetComponentType());
+                            foreach (var component in matchingComponents) {
+                                Debug.Log($"Reconcile component {component.GetInstanceID()}");
+                                AirshipReconciliationService.ReconcileComponent(component);
+                            }
+                        }
+                    }
+                });
+        }
+        
         /// <summary>
         /// Will try to get the component data associated with the specified component (if applicable)
         /// </summary>

@@ -887,6 +887,60 @@ namespace Luau {
             return (metadata, null);
         }
 
+        internal List<LuauMetadataProperty> SyncMetadataWith(LuauMetadata template) {
+            if (template.properties.Count == 0) {
+                Debug.Log("Unity being poopy");
+                return new List<LuauMetadataProperty>();
+            }
+            
+            var newProperties = new LuauMetadataProperty[template.properties.Count];
+            Debug.Log($"Create collection sizeof {template.properties.Count}");
+            
+            // foreach (var property in template.properties) {
+            //     var oldProperty = properties.FirstOrDefault(x => x.name == property.name);
+            //     var index = template.properties.IndexOf(property);
+            //     
+            //     if (oldProperty == null) {
+            //         newProperties[index] = property.Clone();
+            //     } else {
+            //         newProperties[index] = oldProperty;
+            //     }
+            // }
+
+            name = template.name;
+            decorators = new List<LuauMetadataDecoratorElement>(template.decorators);
+            
+            // Handle transactions
+            foreach (var sourceProperty in template.properties) {
+                var targetProperty = FindProperty(sourceProperty.name);
+                var index = template.FindPropertyIndex(sourceProperty.name);
+                if (index == -1) {
+                    throw new InvalidOperationException($"Got -1 while finding property {sourceProperty.name}");
+                }
+
+                if (index > newProperties.Length - 1) {
+                    throw new IndexOutOfRangeException($"Got index {index} for {sourceProperty.name} when count is {newProperties.Length}");
+                }
+                
+                if (targetProperty == null) {
+                    // TODO: Insert
+                    newProperties[index] = sourceProperty.Clone();
+                    Debug.Log($"PropertyAddTransaction {sourceProperty.name} at index {index}");
+                } else {
+                    Debug.Log($"PropertyKeep {sourceProperty.name} at index {index}");
+                    // Set property to its proper index
+                    newProperties[index] = targetProperty;
+                }
+            }
+            
+            Debug.Log($"Test [ {string.Join(", ", template.properties.Select(v => v.name))} ] vs [ {string.Join(", ", newProperties.Select(v => v.name))} ]");
+            
+            // This should also excl. any non-template properties, yes?
+
+            properties = newProperties.ToList();
+            return newProperties.ToList();
+        }
+
         
         internal IReadOnlyList<IAirshipRuntimeReferenceDependency> GetRuntimePropertyDependencies(PropertyDependencyFilterFlags filterFlags = PropertyDependencyFilterFlags.All) {
             List<IAirshipRuntimeReferenceDependency> dependencies = new();
