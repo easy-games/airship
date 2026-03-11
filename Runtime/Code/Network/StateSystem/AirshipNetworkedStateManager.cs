@@ -4,6 +4,9 @@ using Code.Network.Simulation;
 using Code.Network.StateSystem.Structures;
 using Code.Player.Character.Net;
 using Mirror;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 
 namespace Code.Network.StateSystem
@@ -1040,8 +1043,14 @@ namespace Code.Network.StateSystem
         /**
          * Handles triggering interpolation in the system for observers
          */
-        private void Interpolate()
-        {
+        private void Interpolate() {
+            // If time is frozen don't interpolate observed objects. Sometimes (for example using Render Debugger)
+            // update will fire and we need to rely on the zeroed timescale to know no visual change should occur.
+            if (Time.timeScale == 0) return;
+#if UNITY_EDITOR
+            if (EditorApplication.isPaused) return;
+#endif
+            
             // -- Notes on Interpolation
             // Interpolation functions by selecting two snapshots from the server timeline. We can use network.time to access
             // this timeline since Network.time is unscaled time synchronized with the servers unscaled time minus the
