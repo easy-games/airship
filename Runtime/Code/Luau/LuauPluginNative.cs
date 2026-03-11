@@ -918,16 +918,16 @@ public static class LuauPluginNative {
 	// Must match PluginStartup struct in LuauManager.h
 	[StructLayout(LayoutKind.Sequential)]
 	public struct LuauPluginStartup {
-		public GetPropertyCallback getPropertyCallback;
-		public SetPropertyCallback setPropertyCallback;
-		public CallMethodCallback callMethodCallback;
-		public ObjectGCCallback objectGcCallback;
-		public RequireCallback requireCallback;
-		public ConstructorCallback constructorCallback;
-		public ToStringCallback toStringCallback;
-		public IsObjectDestroyedCallback isObjectDestroyedCallback;
-		public GetUnityObjectName getUnityObjectNameCallback;
-		public ResolveRequirePathCallback resolveRequirePathCallback;
+		public IntPtr getPropertyCallback;
+		public IntPtr setPropertyCallback;
+		public IntPtr callMethodCallback;
+		public IntPtr objectGcCallback;
+		public IntPtr requireCallback;
+		public IntPtr constructorCallback;
+		public IntPtr toStringCallback;
+		public IntPtr isObjectDestroyedCallback;
+		public IntPtr getUnityObjectNameCallback;
+		public IntPtr resolveRequirePathCallback;
 		
 		public IntPtr staticList;
 		public IntPtr staticListStrLen;
