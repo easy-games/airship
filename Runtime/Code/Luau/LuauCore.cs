@@ -21,7 +21,7 @@ public partial class LuauCore : MonoBehaviour {
     [InitializeOnLoad]
     private class LuauCorePrintCallbackLoader {
         static LuauCorePrintCallbackLoader() {
-            LuauPlugin.InitializePrintCallback(printCallback_holder);
+            LuauPlugin.InitializePrintCallback(Marshal.GetFunctionPointerForDelegate(printCallback_holder));
         }
     }
 #endif
@@ -137,8 +137,8 @@ public partial class LuauCore : MonoBehaviour {
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
         var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
-        LuauPlugin.InitializePrintCallback(printCallback_holder);
-        LuauPlugin.InitializeComponentCallbacks(componentSetEnabledCallback_holder);
+        LuauPlugin.InitializePrintCallback(Marshal.GetFunctionPointerForDelegate(printCallback_holder));
+        LuauPlugin.InitializeComponentCallbacks(Marshal.GetFunctionPointerForDelegate(componentSetEnabledCallback_holder));
         LuauPlugin.Startup(
             new LuauPluginNative.LuauPluginStartup {
                 getPropertyCallback = Marshal.GetFunctionPointerForDelegate(getPropertyCallback_holder),

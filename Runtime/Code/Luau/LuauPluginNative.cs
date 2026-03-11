@@ -38,10 +38,10 @@ public static class LuauPluginNative {
 	internal delegate bool StartupDelegate(LuauPluginStartup pluginStartup);
 	[NativeDelegate] internal static StartupDelegate Startup;
     
-	internal delegate bool InitializePrintCallbackDelegate(PrintCallback printCallback);
+	internal delegate bool InitializePrintCallbackDelegate(IntPtr printCallback);
 	[NativeDelegate] internal static InitializePrintCallbackDelegate InitializePrintCallback;
 
-	internal delegate bool InitializeComponentCallbacksDelegate(ComponentSetEnabledCallback setEnabledCallback);
+	internal delegate bool InitializeComponentCallbacksDelegate(IntPtr setEnabledCallback);
 	[NativeDelegate] internal static InitializeComponentCallbacksDelegate InitializeComponentCallbacks;
     
 	internal delegate void SubsystemRegistrationDelegate();
@@ -303,14 +303,14 @@ public static class LuauPluginNative {
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    internal static extern bool InitializePrintCallback(PrintCallback printCallback);
+    internal static extern bool InitializePrintCallback(IntPtr printCallback);
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    internal static extern bool InitializeComponentCallbacks(ComponentSetEnabledCallback setEnabledCallback);
+    internal static extern bool InitializeComponentCallbacks(IntPtr setEnabledCallback);
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
