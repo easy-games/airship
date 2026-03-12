@@ -8,6 +8,7 @@ using Mirror;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Code.Network.StateSystem
 {
@@ -45,6 +46,9 @@ namespace Code.Network.StateSystem
         
         [Tooltip("The maximum amount of lag compensation allowed in seconds")] [Range(0, 1)]
         public float maximumLagCompensation = 0.5f;
+
+        [FormerlySerializedAs("replayObservedObjects")] [Tooltip("When true observed objects will be replayed when a resimulation occurs. If observed objects don't interact with your simulation this should be disabled for performance.")]
+        public bool replayForObservers = false;
 
         #endregion
 
@@ -450,7 +454,8 @@ namespace Code.Network.StateSystem
             }
 
             // We are an observing client
-            if (isClient && !isOwned)
+            var shouldTickObservedClient = !replay || replayForObservers;
+            if (isClient && !isOwned && shouldTickObservedClient)
             {
                 this.ObservingClientTick(tick, time, replay);
             }
@@ -525,7 +530,7 @@ namespace Code.Network.StateSystem
             }
 
             // We are an observing client
-            if (isClient && !isOwned) {
+            if (isClient && !isOwned && replayForObservers) {
                 this.ObservingClientSetSnapshot(tick);
             }
         }
@@ -1007,16 +1012,19 @@ namespace Code.Network.StateSystem
                 // data to our state history.
                 return;
             }
-            
-            // Clone the observed state and update it to be on the local physics timeline.
-            var state = (State) observedState.Clone();
-            state.tick = tick;
-            state.time = time;
-            
-            // Set the current state to be what we observed at this time and store it to our
-            // local timeline for resims.
-            this.stateHistory.Add(tick, state);
-            
+
+            // Only add to local timeline if we care about replay
+            if (replayForObservers) {
+                // Clone the observed state and update it to be on the local physics timeline.
+                var state = (State)observedState.Clone();
+                state.tick = tick;
+                state.time = time;
+
+                // Set the current state to be what we observed at this time and store it to our
+                // local timeline for resims.
+                this.stateHistory.Add(tick, state);
+            }
+
             // We don't call SetCurrentState because we control the actual position of the character
             // in the LateUpdate Interpolate() call. The currentSnapshot will be update by InterpolateReachedState()
             // below once we hit a new snapshot.
@@ -1026,11 +1034,10 @@ namespace Code.Network.StateSystem
             // Update our last state tick so we don't call InterpolateReachedState more than once on the same state.
             this.clientLastInterpolatedStateTick = observedState.tick;
             // Notify the system of a new reached state.
-            this.stateSystem.InterpolateReachedState(state);
+            this.stateSystem.InterpolateReachedState(observedState);
         }
 
-        public void ObservingClientSetSnapshot(int tick)
-        {
+        public void ObservingClientSetSnapshot(int tick) {
             var authoritativeState = this.stateHistory.Get(tick);
             if (authoritativeState == null) return;
             this.stateSystem.SetCurrentState(authoritativeState);

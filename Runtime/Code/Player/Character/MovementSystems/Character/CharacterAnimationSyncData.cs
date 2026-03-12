@@ -3,15 +3,19 @@ using UnityEngine;
 
 namespace Code.Player.Character.MovementSystems.Character {
     [LuauAPI]
-    public class CharacterAnimationSyncData {
-        public CharacterState state = CharacterState.Idle;
-        public bool grounded = true;
-        public bool sprinting = false;
-        public bool crouching = false;
-        public bool jumping = false;
-        public Vector3 localVelocity = Vector3.zero;
-        public Vector3 lookVector = Vector3.zero;
+    public struct CharacterAnimationSyncData {
+        public CharacterState state;
+        public bool grounded;
+        public bool sprinting;
+        public bool crouching;
+        public bool jumping;
+        public Vector3 localVelocity;
+        public Vector3 lookVector;
 
+        public static CharacterAnimationSyncData Default => new CharacterAnimationSyncData {
+            grounded = true,
+            state = CharacterState.Idle,
+        };
 
         // override object.Equals
         public override bool Equals(object obj) {

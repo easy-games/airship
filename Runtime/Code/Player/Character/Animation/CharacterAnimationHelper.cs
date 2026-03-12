@@ -102,7 +102,7 @@ namespace Code.Player.Character.NetworkedMovement {
             GetRandomReactionLength();
 
             //Enter default state
-            SetState(new CharacterAnimationSyncData());
+            SetState(CharacterAnimationSyncData.Default);
         }
 
         public bool IsInParticleDistance() {

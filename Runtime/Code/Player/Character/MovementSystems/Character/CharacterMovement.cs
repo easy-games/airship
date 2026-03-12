@@ -1333,8 +1333,11 @@ namespace Code.Player.Character.MovementSystems.Character {
                     jumping = didJump
                 };
 
-                if (newState != currentAnimState) {
-                    stateChanged?.Invoke((int)newState.state);
+                if (!newState.Equals(currentAnimState)) {
+                    if (newState.state != currentAnimState.state) {
+                        stateChanged?.Invoke((int)newState.state);
+                    }
+
                     if (animationHelper) {
                         animationHelper.SetState(newState);
                     }
@@ -1398,7 +1401,7 @@ namespace Code.Player.Character.MovementSystems.Character {
         public override void InterpolateReachedState(CharacterSnapshotData snapshot) {
             var leftGroundWhileHoldingJump = currentMoveSnapshot.isGrounded && !snapshot.isGrounded && snapshot.alreadyJumped;
             
-            var newState = new CharacterAnimationSyncData() {
+            var newAnimState = new CharacterAnimationSyncData() {
                 state = snapshot.state,
                 grounded = snapshot.isGrounded && !snapshot.alreadyJumped,
                 sprinting = snapshot.isSprinting,
@@ -1407,17 +1410,17 @@ namespace Code.Player.Character.MovementSystems.Character {
                 lookVector = snapshot.lookVector,
                 jumping = snapshot.jumpCount > currentMoveSnapshot.jumpCount || leftGroundWhileHoldingJump
             };
-            var changed = newState.state != currentAnimState.state;
+            var changed = newAnimState.state != currentAnimState.state;
 
             if (animationHelper) {
-                animationHelper.SetState(newState);
+                animationHelper.SetState(newAnimState);
             }
 
             currentMoveSnapshot = snapshot;
-            currentAnimState = newState;
+            currentAnimState = newAnimState;
 
             if (changed) {
-                stateChanged?.Invoke((int)newState.state);
+                stateChanged?.Invoke((int)newAnimState.state);
             }
 
             OnInterpolateReachedState?.Invoke(snapshot);
