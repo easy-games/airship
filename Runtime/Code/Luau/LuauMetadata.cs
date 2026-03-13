@@ -384,6 +384,13 @@ namespace Luau {
             return false;
         }
 
+        internal void EmplaceValueWith(LuauMetadataProperty property) {
+            serializedValue = property.serializedValue;
+            serializedObject = property.serializedObject;
+            modified = property.modified;
+            defaultValue = property.defaultValue;
+        }
+
         internal bool HasSameTypesAs(LuauMetadataProperty other) {
             return type == other.type && objectType == other.objectType;
         }
@@ -887,53 +894,45 @@ namespace Luau {
             return (metadata, null);
         }
 
-        internal List<LuauMetadataProperty> SyncMetadataWith(LuauMetadata template) {
-            if (template.properties.Count == 0) {
-                Debug.Log("Unity being poopy");
-                return new List<LuauMetadataProperty>();
-            }
-            
-            var newProperties = new LuauMetadataProperty[template.properties.Count];
-            Debug.Log($"Create collection sizeof {template.properties.Count}");
-            
-            // foreach (var property in template.properties) {
-            //     var oldProperty = properties.FirstOrDefault(x => x.name == property.name);
-            //     var index = template.properties.IndexOf(property);
-            //     
-            //     if (oldProperty == null) {
-            //         newProperties[index] = property.Clone();
-            //     } else {
-            //         newProperties[index] = oldProperty;
-            //     }
-            // }
+        /// <summary>
+        /// Performs a synchronization operation with metadata based on a script, and an optional prefab metadata for inherited values
+        /// </summary>
+        /// <param name="scriptMetadata">The script metadata to synchronize with</param>
+        /// <param name="prefabMetadata">The prefab metadata to synchronize with</param>
+        /// <returns></returns>
+        /// <exception cref="IndexOutOfRangeException">If the script metadata properties are out of sync with the new property count</exception>
+        internal List<LuauMetadataProperty> SyncMetadataWith(LuauMetadata scriptMetadata, LuauMetadata prefabMetadata = null) {
+            if (scriptMetadata.properties.Count == 0) return new List<LuauMetadataProperty>();
+            var newProperties = new LuauMetadataProperty[scriptMetadata.properties.Count];
 
-            name = template.name;
-            decorators = new List<LuauMetadataDecoratorElement>(template.decorators);
+            name = scriptMetadata.name;
+            decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
             
             // Handle transactions
-            foreach (var sourceProperty in template.properties) {
+            foreach (var sourceProperty in scriptMetadata.properties) {
                 var targetProperty = FindProperty(sourceProperty.name);
-                var index = template.FindPropertyIndex(sourceProperty.name);
-                if (index == -1) {
-                    throw new InvalidOperationException($"Got -1 while finding property {sourceProperty.name}");
-                }
+                var index = scriptMetadata.FindPropertyIndex(sourceProperty.name);
+                var prefabProperty = prefabMetadata?.FindProperty(sourceProperty.name);
 
                 if (index > newProperties.Length - 1) {
                     throw new IndexOutOfRangeException($"Got index {index} for {sourceProperty.name} when count is {newProperties.Length}");
                 }
                 
                 if (targetProperty == null) {
-                    // TODO: Insert
-                    newProperties[index] = sourceProperty.Clone();
-                    Debug.Log($"PropertyAddTransaction {sourceProperty.name} at index {index}");
+                    var newProperty = sourceProperty.Clone();
+                    
+                    if (prefabProperty != null) {
+                        newProperty.EmplaceValueWith(prefabProperty);
+                        Debug.Log($"Set default values for {sourceProperty.name}");
+                    }
+                        
+                    newProperties[index] = newProperty;
                 } else {
-                    Debug.Log($"PropertyKeep {sourceProperty.name} at index {index}");
-                    // Set property to its proper index
                     newProperties[index] = targetProperty;
                 }
             }
             
-            Debug.Log($"Test [ {string.Join(", ", template.properties.Select(v => v.name))} ] vs [ {string.Join(", ", newProperties.Select(v => v.name))} ]");
+            Debug.Log($"Test [ {string.Join(", ", scriptMetadata.properties.Select(v => v.name))} ] vs [ {string.Join(", ", newProperties.Select(v => v.name))} ]");
             
             // This should also excl. any non-template properties, yes?
 

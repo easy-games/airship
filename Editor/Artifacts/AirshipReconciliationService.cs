@@ -258,25 +258,11 @@ namespace Airship.Editor {
             var scriptMetadata = prefab.script.m_metadata;
             var instanceMetadata = instance.metadata;
             var prefabMetadata = prefab.metadata;
-            //
-            //
-            
-            var serializedPrefabComponent = new SerializedObject(prefab);
-            var serializedInstanceComponent =  new SerializedObject(instance);
 
-            var prefabSerialiizedMetadata = serializedPrefabComponent.FindProperty(nameof(AirshipComponent.metadata));
-            var instanceSerializedMetadata = serializedInstanceComponent.FindProperty(nameof(AirshipComponent.metadata));
-            //
-            // var prefabProperties =
-            //     prefabSerialiizedMetadata.FindPropertyRelative(nameof(LuauMetadata.properties));
-            //
-            var instanceProperties =
-                instanceSerializedMetadata.FindPropertyRelative(nameof(LuauMetadata.properties));
-            
-            
-            // Ensure property order
+            // Synchronize our prefab's metadata here
             prefabMetadata.SyncMetadataWith(scriptMetadata);
-            instanceMetadata.SyncMetadataWith(scriptMetadata);
+            // Then, once the prefab is synchronized, we want to ensure the instance matches the prefab
+            instanceMetadata.SyncMetadataWith(scriptMetadata, prefabMetadata);
             return false;
         }
         
