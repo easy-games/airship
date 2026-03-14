@@ -389,6 +389,7 @@ namespace Luau {
             serializedObject = property.serializedObject;
             modified = property.modified;
             defaultValue = property.defaultValue;
+            Debug.Log($"{property.name} modified to {serializedObject?.ToString() ?? serializedValue} {modified}");
         }
 
         internal bool HasSameTypesAs(LuauMetadataProperty other) {
@@ -476,6 +477,7 @@ namespace Luau {
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
             clone.items = items != null ? items.Clone() : new LuauMetadataArrayProperty();
+            clone.defaultValue = defaultValue;
             return clone;
         }
 
@@ -764,6 +766,18 @@ namespace Luau {
             }
 
             if (defaultValue == null) {
+                switch (ComponentType) {
+                    case AirshipComponentPropertyType.AirshipString:
+                        serializedValue = "";
+                        return true;
+                    case AirshipComponentPropertyType.AirshipBoolean:
+                    case AirshipComponentPropertyType.AirshipFloat:
+                    case AirshipComponentPropertyType.AirshipInt:
+                    case AirshipComponentPropertyType.AirshipLayerMask:
+                        serializedValue = 0.ToString(CultureInfo.InvariantCulture);
+                        return true;
+                }
+                
                 return false;
             }
             
@@ -932,10 +946,15 @@ namespace Luau {
                 }
             }
             
-            Debug.Log($"Test [ {string.Join(", ", scriptMetadata.properties.Select(v => v.name))} ] vs [ {string.Join(", ", newProperties.Select(v => v.name))} ]");
-            
-            // This should also excl. any non-template properties, yes?
+            foreach (var property in newProperties) {
+                var scriptProperty = scriptMetadata.FindProperty(property.name);
+                if (scriptProperty == null) continue;
 
+                property.fileRef = scriptProperty.fileRef;
+                property.refPath = scriptProperty.refPath;
+                property.defaultValue = scriptProperty.defaultValue;
+            }
+            
             properties = newProperties.ToList();
             return newProperties.ToList();
         }
