@@ -8,6 +8,7 @@ namespace Code.Util {
 		private static readonly Queue<Action> _executionQueue = new Queue<Action>();
 
 		private void Awake() {
+			base.Awake();
 			DontDestroyOnLoad(this);
 		}
 

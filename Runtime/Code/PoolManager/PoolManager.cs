@@ -20,6 +20,7 @@ namespace Code.PoolManager {
 		private bool dirty = false;
 
 		void Awake () {
+			base.Awake();
 			// root = transform;
 			prefabLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();
 			instanceLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();

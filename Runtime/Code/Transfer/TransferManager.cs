@@ -12,6 +12,7 @@ using UnityEngine.SceneManagement;
 public class TransferManager : Singleton<TransferManager> {
 
     private void Awake() {
+        base.Awake();
         DontDestroyOnLoad(this);
     }
 

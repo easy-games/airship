@@ -6,6 +6,7 @@ public class StateManager : Singleton<StateManager> {
     private Dictionary<string, string> stateDict = new();
 
     private void Awake() {
+        base.Awake();
         DontDestroyOnLoad(gameObject);
         this.stateDict.Clear();
     }

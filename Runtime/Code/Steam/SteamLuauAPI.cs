@@ -39,6 +39,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 
 #if STEAMWORKS_NET
     private void Awake() {
+        base.Awake();
         // Don't initialized multiple times
         if (initialized) {
             Destroy(this.gameObject);
