@@ -935,11 +935,7 @@ namespace Luau {
                 if (targetProperty == null) {
                     var newProperty = sourceProperty.Clone();
                     
-                    if (prefabProperty != null) {
-                        newProperty.EmplaceValueWith(prefabProperty);
-                        Debug.Log($"Set default values for {sourceProperty.name}");
-                    }
-                        
+                    if (prefabProperty != null) newProperty.EmplaceValueWith(prefabProperty);
                     newProperties[index] = newProperty;
                 } else {
                     newProperties[index] = targetProperty;
@@ -953,6 +949,7 @@ namespace Luau {
                 property.fileRef = scriptProperty.fileRef;
                 property.refPath = scriptProperty.refPath;
                 property.defaultValue = scriptProperty.defaultValue;
+                property.ReconcileDecorators(scriptProperty);
             }
             
             properties = newProperties.ToList();
