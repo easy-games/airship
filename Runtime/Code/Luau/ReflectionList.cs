@@ -192,6 +192,12 @@ namespace Luau {
             [typeof(AudioResource)] = LuauContextAll,
             [typeof(AudioMixerGroup)] = LuauContextAll,
             [typeof(AudioMixerSnapshot)] = LuauContextAll,
+            [typeof(AudioLowPassFilter)] = LuauContextAll,
+            [typeof(AudioHighPassFilter)] = LuauContextAll,
+            [typeof(AudioChorusFilter)] = LuauContextAll,
+            [typeof(AudioDistortionFilter)] = LuauContextAll,
+            [typeof(AudioEchoFilter)] = LuauContextAll,
+            [typeof(AudioReverbFilter)] = LuauContextAll,
             //Rendering
             [typeof(Graphics)] = LuauContextAll,
             [typeof(Material)] = LuauContextAll,

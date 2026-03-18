@@ -125,8 +125,17 @@ public class TypeGenerator : MonoBehaviour
             typeof(Dropdown),
             typeof(TMP_Dropdown),
             typeof(CanvasHitDetector),
+
+            // Audio
             typeof(AudioSource),
             typeof(AudioClip),
+            typeof(AudioLowPassFilter),
+            typeof(AudioHighPassFilter),
+            typeof(AudioChorusFilter),
+            typeof(AudioDistortionFilter),
+            typeof(AudioEchoFilter),
+            typeof(AudioReverbFilter),
+
             typeof(Tween<>),
             typeof(Bridge),
             typeof(CanvasGroup),
