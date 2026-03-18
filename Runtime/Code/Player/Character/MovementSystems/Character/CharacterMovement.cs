@@ -5,6 +5,7 @@ using Code.Network.StateSystem;
 using Code.Player.Character.NetworkedMovement;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 
 namespace Code.Player.Character.MovementSystems.Character {
@@ -118,24 +119,24 @@ namespace Code.Player.Character.MovementSystems.Character {
 
 #region EVENTS
 
-        public delegate void StateChanged(object state);
+        public delegate void StateChanged(int state);
 
         public event StateChanged stateChanged;
 
-        public event Action<object> OnSetMode;
+        public event Action<NetworkedStateSystemMode> OnSetMode;
 
         /// <summary>
         /// Called when a new command is being created. This can be used to set custom data for new
         /// command by calling the SetCustomInputData function during this event.
         /// </summary>
-        public event Action<object> OnCreateCommand;
+        public event Action<int> OnCreateCommand;
 
         /// <summary>
         /// Called on the start of processing for a tick. The state passed in is the last state of the
         /// movement system.
         /// Params: CharacterMovementInput input, CharacterMovementState state, boolean isReplay
         /// </summary>
-        public event Action<object, object, object> OnProcessCommand;
+        public event Action<CharacterInputData, CharacterSnapshotData, bool> OnProcessCommand;
 
         /// <summary>
         /// Called at the end of processing for a tick. This is after the command has been processed by
@@ -144,53 +145,53 @@ namespace Code.Player.Character.MovementSystems.Character {
         /// state will cause unwanted resimulations.
         /// Params: CharacterMovementInput input, CharacterMovementState finalState, boolean isReplay
         /// </summary>
-        public event Action<object, object, object> OnProcessedCommand;
+        public event Action<CharacterInputData, CharacterSnapshotData, bool> OnProcessedCommand;
 
         /// <summary>
         /// Called when the movement system needs to reset to a specific snapshot
         /// state. The passed object is the state that we need to reset to.
         /// </summary>
-        public event Action<object> OnSetSnapshot;
+        public event Action<CharacterSnapshotData> OnSetSnapshot;
 
         /// <summary>
         /// Called when we need to capture a given snapshot.
         /// </summary>
-        public event Action<object, object> OnCaptureSnapshot;
+        public event Action<int, int> OnCaptureSnapshot;
 
         /// <summary>
         /// Fired every frame. Provides lastState, nextState, and delta between the two.
         /// Internally this is used to position the character in the correct location for rendering
         /// based upon the received network snapshots.
         /// </summary>
-        public event Action<object, object, object> OnInterpolateState;
+        public event Action<CharacterSnapshotData, CharacterSnapshotData, double> OnInterpolateState;
 
         /// <summary>
         /// Fired on fixed update, but only when a new state has been reached. We use this internally
         /// to set things like animation state where interpolation between two states is not possible.
         /// Provides the new state that has been reached.
         /// </summary>
-        public event Action<object> OnInterpolateReachedState;
+        public event Action<CharacterSnapshotData> OnInterpolateReachedState;
 
-        public event Action<object, object> OnCompareSnapshots;
+        public event Action<CharacterSnapshotData, CharacterSnapshotData> OnCompareSnapshots;
 
-        public event Action<object> OnMoveDirectionChanged;
+        public event Action<Vector3> OnMoveDirectionChanged;
 
         /// <summary>
         /// Called when the look vector is externally set
         /// Params: Vector3 currentLookVector
         /// </summary>
-        public event Action<object> OnNewLookVector;
+        public event Action<Vector3> OnNewLookVector;
 
         /// <summary>
         /// Called when movement processes a new jump
         /// Params: Vector3 velocity
         /// </summary>
-        public event Action<object> OnJumped;
+        public event Action<Vector3> OnJumped;
 
         /// <summary>
         /// Params: Vector3 velocity, RaycastHit hitInfo
         /// </summary>
-        public event Action<object, object> OnImpactWithGround;
+        public event Action<Vector3, RaycastHit> OnImpactWithGround;
 
 #endregion
 
@@ -1412,9 +1413,11 @@ namespace Code.Player.Character.MovementSystems.Character {
             };
             var changed = newAnimState.state != currentAnimState.state;
 
+            Profiler.BeginSample("SetAnimState");
             if (animationHelper) {
                 animationHelper.SetState(newAnimState);
             }
+            Profiler.EndSample();
 
             currentMoveSnapshot = snapshot;
             currentAnimState = newAnimState;
@@ -1563,16 +1566,18 @@ namespace Code.Player.Character.MovementSystems.Character {
 #region TypeScript Interaction
 
         public double GetLocalSimulationTickFromCommandNumber(int commandNumber) {
-            CharacterSnapshotData localState = null;
+            bool localStateFound = false;
+            CharacterSnapshotData localState = default;
 
             foreach (var state in manager.stateHistory.Values) {
                 if (state.lastProcessedCommand >= commandNumber) {
                     localState = state;
+                    localStateFound = true;
                     break;
                 }
             }
 
-            if (localState == null) {
+            if (!localStateFound) {
                 Debug.LogWarning(
                     $"Unable to find predicted state for command number {commandNumber}. Returning 0 as simulation time.");
                 return 0;
@@ -1582,15 +1587,17 @@ namespace Code.Player.Character.MovementSystems.Character {
         }
 
         public bool RequestResimulation(int commandNumber) {
-            CharacterSnapshotData clientPredictedState = null;
+            bool clientPredictedStateFound = false;
+            CharacterSnapshotData clientPredictedState = default;
             foreach (var predictedState in manager.stateHistory.Values) {
                 if (predictedState.lastProcessedCommand == commandNumber) {
                     clientPredictedState = predictedState;
+                    clientPredictedStateFound = true;
                     break;
                 }
             }
 
-            if (clientPredictedState == null) {
+            if (!clientPredictedStateFound) {
                 Debug.LogWarning($"Unable to find predicted state for command number {commandNumber} on " + name +
                                  ". Resimulation will not be performed.");
                 return false;

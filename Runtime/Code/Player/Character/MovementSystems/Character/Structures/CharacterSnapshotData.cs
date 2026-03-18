@@ -2,6 +2,7 @@ using System;
 using Assets.Luau;
 using Code.Network.StateSystem;
 using Code.Network.StateSystem.Structures;
+using Code.Player.Character.Net;
 using Code.Util;
 using Force.Crc32;
 using Mirror;
@@ -10,8 +11,13 @@ using UnityEngine;
 namespace Code.Player.Character.MovementSystems.Character
 {
     [LuauAPI]
-    public class CharacterSnapshotData : StateSnapshot
+    public struct CharacterSnapshotData : IStateSnapshot, IEquatable<CharacterSnapshotData>
     {
+        // IStateSnapshot base fields
+        public int lastProcessedCommand { get; set; }
+        public double time { get; set; }
+        public int tick { get; set; }
+
         public bool inputDisabled;
         public bool isFlying;
         public bool isSprinting;
@@ -20,23 +26,26 @@ namespace Code.Player.Character.MovementSystems.Character
         public bool isCrouching;
         public bool prevStepUp;
         public bool isGrounded;
-        
+
         public Vector3 position;
         public Vector3 velocity;
         public Vector3 lookVector;
-        
+
         public byte jumpCount;
-        public CharacterState state = CharacterState.Idle;
+        public CharacterState state;
         // > 0 means it is possible to jump. Value is the number of ticks they have left until they can no longer jump. byte.MaxValue when grounded.
         public byte canJump;
-    
+
         public BinaryBlob customData;
 
         // Cached for reuse. This assumes the fields on the snapshot will never change. (Which should be the case)
-        // Cloning will not clone this field, so you can safely clone then modify and existing snapshot and regenerate the crc32
         private uint _crc32;
-        
-        public override bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
+
+        public bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
+            where TState : struct, IStateSnapshot
+            where TDiff : StateDiff
+            where TInput : InputCommand
+            where TSystem : NetworkedStateSystem<TSystem, TState, TDiff, TInput>
         {
             // TODO: could probably be optimized?
             if (system.GetType() != typeof(CharacterMovement))
@@ -52,7 +61,7 @@ namespace Code.Player.Character.MovementSystems.Character
             }
 
             string message = "";
-            
+
             // We do not compare time since it does not affect local client simulation
             var vectorTolerance = 0.01 * 0.01; // sqr since we use sqr magnitude
             var lastProcessedCommandEqual = this.lastProcessedCommand == other.lastProcessedCommand;
@@ -123,9 +132,65 @@ namespace Code.Player.Character.MovementSystems.Character
                 same = movement.compareResult;
                 // if (same == false) message += $"customData: a != b";
             }
-            
+
             // if (message.Length != 0) Debug.Log(message.TrimEnd());
             return same;
+        }
+
+        public bool Equals(CharacterSnapshotData other) {
+            return time == other.time
+                   && tick == other.tick
+                   && lastProcessedCommand == other.lastProcessedCommand
+                   && inputDisabled == other.inputDisabled
+                   && isFlying == other.isFlying
+                   && isSprinting == other.isSprinting
+                   && airborneFromImpulse == other.airborneFromImpulse
+                   && alreadyJumped == other.alreadyJumped
+                   && isCrouching == other.isCrouching
+                   && prevStepUp == other.prevStepUp
+                   && isGrounded == other.isGrounded
+                   && position == other.position
+                   && velocity == other.velocity
+                   && lookVector == other.lookVector
+                   && jumpCount == other.jumpCount
+                   && state == other.state
+                   && canJump == other.canJump
+                   && (customData == null ? other.customData == null : customData.Equals(other.customData));
+        }
+        public override bool Equals(object obj) => obj is CharacterSnapshotData other && Equals(other);
+        
+        public override int GetHashCode() {
+            var hash = new HashCode();
+
+            hash.Add(tick);
+            hash.Add(lastProcessedCommand);
+            
+            hash.Add(inputDisabled);
+            hash.Add(isFlying);
+            hash.Add(isSprinting);
+            hash.Add(airborneFromImpulse);
+            hash.Add(alreadyJumped);
+            hash.Add(isCrouching);
+            hash.Add(prevStepUp);
+            hash.Add(isGrounded);
+
+            hash.Add(NetworkSerializationUtil.CompressToShort(position.x));
+            hash.Add(NetworkSerializationUtil.CompressToShort(position.y));
+            hash.Add(NetworkSerializationUtil.CompressToShort(position.z));
+            hash.Add(NetworkSerializationUtil.CompressToShort(velocity.x));
+            hash.Add(NetworkSerializationUtil.CompressToShort(velocity.y));
+            hash.Add(NetworkSerializationUtil.CompressToShort(velocity.z));
+            hash.Add(NetworkSerializationUtil.CompressToShort(lookVector.x));
+            hash.Add(NetworkSerializationUtil.CompressToShort(lookVector.y));
+            hash.Add(NetworkSerializationUtil.CompressToShort(lookVector.z));
+
+            hash.Add(jumpCount);
+            hash.Add(state);
+            hash.Add(canJump);
+
+            if (customData != null) hash.Add(customData);
+
+            return hash.ToHashCode();
         }
 
         public void CopyFrom(CharacterSnapshotData copySnapshot) {
@@ -172,7 +237,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 $"CustomData: {(customData != null ? $"Size: {customData.DataSize}" : "null")}";
         }
 
-        public override object Clone()
+        public object Clone()
         {
             return new CharacterSnapshotData()
             {
@@ -182,7 +247,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 position = position,
                 velocity = velocity,
                 canJump = canJump,
-                state = state, 
+                state = state,
                 isGrounded = isGrounded,
                 prevStepUp = prevStepUp,
                 isCrouching = isCrouching,
@@ -194,10 +259,11 @@ namespace Code.Player.Character.MovementSystems.Character
                 inputDisabled = inputDisabled,
                 lookVector = lookVector,
                 customData = customData?.Clone(),
+                // _crc32 intentionally not copied — caller may modify fields before calling ComputeCrc32()
             };
         }
-        
-        public override StateDiff CreateDiff<TState>(TState snapshot) {
+
+        public StateDiff CreateDiff<TState>(TState snapshot) where TState : IStateSnapshot {
             if (snapshot is not CharacterSnapshotData other) {
                 throw new Exception("Invalid snapshot for diff generation.");
             }
@@ -214,7 +280,7 @@ namespace Code.Player.Character.MovementSystems.Character
             bool jumpCountChanged = this.jumpCount != other.jumpCount;
             bool stateChanged = this.state != other.state;
             bool canJumpChanged = this.canJump != other.canJump;
-            
+
             // Flag for if we are sending a full snapshot or just a diff. Sometimes a diff is bigger if
             // all bytes have changed.
             bool fullCustomData = customData == null; // Always send full custom data if base data is null
@@ -223,7 +289,7 @@ namespace Code.Player.Character.MovementSystems.Character
                 customDataDiff = customData.CreateDiff(other.customData);
                 fullCustomData = customDataDiff.Length > other.customData.Data.Length;
             }
-            
+
             // Set the changed mask to reflect changed fields
             byte changedMask = 0;
             if (boolsChanged) BitUtil.SetBit(ref changedMask, 0, true);
@@ -261,10 +327,10 @@ namespace Code.Player.Character.MovementSystems.Character
             } else if (customDataDiff != null) {
                 writer.WriteBytes(customDataDiff, 0, customDataDiff.Length);
             }
-            
+
             var dataArray = writer.ToArray();
             NetworkWriterPool.Return(writer);
-            
+
             return new CharacterStateDiff {
                 baseTick = tick, // The base is the instance CreateDiff is being called on, so use our instance time value as the base time.
                 crc32 = other.ComputeCrc32(),
@@ -276,10 +342,7 @@ namespace Code.Player.Character.MovementSystems.Character
         /// Attempts to apply a diff to this snapshot to generate a new snapshot. Returns null if
         /// the diff cannot be correctly applied to this snapshot
         /// </summary>
-        /// <param name="diff"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public override StateSnapshot ApplyDiff(StateDiff diff) {
+        public IStateSnapshot ApplyDiff(StateDiff diff) {
             if (diff is not CharacterStateDiff stateDiff) {
                 throw new Exception("Invalid snapshot for applying diff.");
             }
@@ -323,7 +386,7 @@ namespace Code.Player.Character.MovementSystems.Character
             if (BitUtil.GetBit(changedMask, 5)) snapshot.state = (CharacterState)reader.Read<byte>();
             if (BitUtil.GetBit(changedMask, 6)) snapshot.canJump = reader.Read<byte>();
             var fullCustomData = BitUtil.GetBit(changedMask, 7);
-            
+
             if (reader.Remaining != 0) {
                 var cData = reader.ReadBytes(reader.Remaining);
                 // If bit is set, the diff is actually just the full data.
@@ -336,7 +399,7 @@ namespace Code.Player.Character.MovementSystems.Character
             else {
                 snapshot.customData = null;
             }
-            
+
             NetworkReaderPool.Return(reader);
 
             var crc32 = snapshot.ComputeCrc32();
@@ -352,7 +415,7 @@ namespace Code.Player.Character.MovementSystems.Character
 
         public uint ComputeCrc32() {
             if (_crc32 != 0) return _crc32;
-            
+
             // We serialize to a byte array for calculating the CRC32. We use slightly more lenient compression
             // on things like the vectors so that floating point errors don't cause the crc checks to fail.
             var writer = NetworkWriterPool.Get();
@@ -361,8 +424,8 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(bools);
             writer.Write(this.tick);
             writer.Write(this.lastProcessedCommand);
-            
-            // We don't include position and velocity because we send the full value for those instead of a diff. The 
+
+            // We don't include position and velocity because we send the full value for those instead of a diff. The
             // floating point representation of those numbers also makes it challenging to get a consistent CRC.
 
             writer.Write(NetworkSerializationUtil.CompressToShort(this.lookVector.x));
@@ -373,9 +436,9 @@ namespace Code.Player.Character.MovementSystems.Character
             writer.Write(this.jumpCount);
             if (this.customData != null) writer.Write(this.customData.Data);
             var bytes = writer.ToArray();
-            
+
             NetworkWriterPool.Return(writer);
-            
+
             _crc32 = Crc32Algorithm.Compute(bytes);
             return _crc32;
         }
@@ -392,7 +455,7 @@ namespace Code.Player.Character.MovementSystems.Character
             BitUtil.SetBit(ref bools, 6, value.prevStepUp);
             BitUtil.SetBit(ref bools, 7, value.isGrounded);
         }
-        
+
         public static void WriteCharacterSnapshotData(this NetworkWriter writer, CharacterSnapshotData value) {
             byte bools = 0;
             EncodeBools(ref bools, value);
@@ -405,7 +468,7 @@ namespace Code.Player.Character.MovementSystems.Character
             else {
                 writer.WriteInt(0);
             }
-            
+
             writer.Write(value.time);
             writer.Write(value.tick);
             writer.Write(value.lastProcessedCommand);
@@ -436,15 +499,15 @@ namespace Code.Player.Character.MovementSystems.Character
                 isCrouching = BitUtil.GetBit(bools, 5),
                 prevStepUp = BitUtil.GetBit(bools, 6),
                 isGrounded = BitUtil.GetBit(bools, 7),
-                
+
                 time = reader.Read<double>(),
                 tick = reader.Read<int>(),
                 lastProcessedCommand = reader.Read<int>(),
                 position = reader.Read<Vector3>(),
                 velocity = reader.Read<Vector3>(),
                 lookVector = new Vector3(
-                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
-                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()), 
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
+                    NetworkSerializationUtil.DecompressShort(reader.Read<short>()),
                     NetworkSerializationUtil.DecompressShort(reader.Read<short>())),
                 canJump = reader.Read<byte>(),
                 state = (CharacterState) reader.Read<byte>(),

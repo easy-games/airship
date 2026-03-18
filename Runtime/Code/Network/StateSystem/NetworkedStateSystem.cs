@@ -25,7 +25,7 @@ namespace Code.Network.StateSystem
 
     [RequireComponent(typeof(NetworkIdentity))]
     public abstract class NetworkedStateSystem<StateSystem, State, Diff, Input> : NetworkBehaviour
-        where State : StateSnapshot where Diff : StateDiff where Input : InputCommand 
+        where State : struct, IStateSnapshot where Diff : StateDiff where Input : InputCommand
         where StateSystem : NetworkedStateSystem<StateSystem, State, Diff, Input >
     {
         [NonSerialized] public NetworkedStateSystemMode mode;

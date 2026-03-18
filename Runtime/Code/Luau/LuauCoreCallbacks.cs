@@ -1473,7 +1473,8 @@ public partial class LuauCore : MonoBehaviour {
 
                 foreach (ParameterInfo param in eventInfoParams) {
                     if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false && param.ParameterType.IsEnum == false) {
-                        return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
+                        // TODO hm
+                        // return LuauError(thread, $"Error: {methodName} parameter {param.Name} is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                     }
                 }
 

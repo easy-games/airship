@@ -1,11 +1,15 @@
 using Code.Network.StateSystem.Structures;
-using Unity.VisualScripting;
+using Code.Player.Character.Net;
 using UnityEngine;
 
 namespace Code.Network.StateSystem.Implementations.TestMovementSystem
 {
-    public class TestMovementState : StateSnapshot
+    public struct TestMovementState : IStateSnapshot
     {
+        public int lastProcessedCommand { get; set; }
+        public double time { get; set; }
+        public int tick { get; set; }
+        
         public Vector3 position;
         public Quaternion rotation;
         public Vector3 velocity;
@@ -19,14 +23,26 @@ namespace Code.Network.StateSystem.Implementations.TestMovementSystem
                    this.tick;
         }
 
-        public override bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
+        public StateDiff CreateDiff<TState>(TState snapshot) where TState : IStateSnapshot {
+            throw new System.NotImplementedException();
+        }
+
+        public IStateSnapshot ApplyDiff(StateDiff diff) {
+            throw new System.NotImplementedException();
+        }
+
+        public bool Compare<TSystem, TState, TDiff, TInput>(NetworkedStateSystem<TSystem, TState, TDiff, TInput> system, TState snapshot)
+            where TState : struct, IStateSnapshot
+            where TDiff : StateDiff
+            where TInput : InputCommand
+            where TSystem : NetworkedStateSystem<TSystem, TState, TDiff, TInput>
         {
             if (snapshot is not TestMovementState other) return false;
             return this.lastProcessedCommand == other.lastProcessedCommand && this.position == other.position &&
                    this.rotation == other.rotation;
         }
 
-        public override object Clone()
+        public object Clone()
         {
             return new TestMovementState()
             {

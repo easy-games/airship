@@ -574,7 +574,7 @@ public partial class LuauCore : MonoBehaviour
         return true;
     }
 
-    public static void WritePropertyToThreadObject(IntPtr thread, object value) {
+    public static void WritePropertyToThreadObject<T>(IntPtr thread, T value) {
         if (value == null) {
             LuauPlugin.PushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
             return;

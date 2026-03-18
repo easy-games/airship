@@ -15,7 +15,7 @@ namespace Code.Network.StateSystem
     [LuauAPI]
     [RequireComponent(typeof(NetworkIdentity))]
     public abstract class AirshipNetworkedStateManager<StateSystem, State, Diff, Input> : NetworkBehaviour
-        where State : StateSnapshot
+        where State : struct, IStateSnapshot
         where Diff : StateDiff
         where Input : InputCommand
         where StateSystem : NetworkedStateSystem<StateSystem, State, Diff, Input> {
@@ -99,9 +99,11 @@ namespace Code.Network.StateSystem
         private SortedList<int, State> serverReceivedStateBuffer = new SortedList<int, State>();
         // Last observed state from OnTick when running as a non-auth server.
         private State serverLastObservedState;
+        private bool serverLastObservedStateSet;
 
         // Client processing for input prediction
         private State clientLastConfirmedState;
+        private bool clientLastConfirmedStateSet;
 
         // Fields for managing re-simulations
         /**
@@ -327,8 +329,6 @@ namespace Code.Network.StateSystem
                 // If we have no state yet, don't send
                 if (this.stateHistory.Keys.Count == 0) return;
                 var state = this.stateHistory.Values[^1];
-                // If we have no state yet, don't send (this shouldn't be possible)
-                if (state == null) return;
 
                 foreach (var client in NetworkServer.connections) {
                     if (!client.Value.isAuthenticated || !client.Value.isReady) continue;
@@ -347,8 +347,7 @@ namespace Code.Network.StateSystem
                         continue;
                     }
 
-                    var baseState = this.stateHistory.GetExact(lastAckedTick);
-                    if (baseState == null) {
+                    if (!this.stateHistory.TryGetExact(lastAckedTick, out var baseState)) {
                         this.SendServerSnapshotToClient(client.Value, state);
                         // We will expect the client to receive this and send snapshots after this
                         // as an optimization.
@@ -708,8 +707,7 @@ namespace Code.Network.StateSystem
 
         public void AuthServerSetSnapshot(int tick)
         {
-            var state = this.stateHistory.GetExact(tick);
-            if (state == null)
+            if (!this.stateHistory.TryGetExact(tick, out var state))
             {
                 // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
                 // that freshly spawned players will exist in rollback when they shouldn't but we won't handle that edge case for now.
@@ -757,9 +755,8 @@ namespace Code.Network.StateSystem
 
                 if (this.stateHistory.IsAuthoritativeEntry(tick))
                 {
-                    var oldState = this.stateHistory.GetExact(tick);
+                    if (!this.stateHistory.TryGetExact(tick, out var oldState)) return;
                     // Debug.Log(("Replayed command " + input.commandNumber + " authoritatively resulted in " + oldState));
-                    if (oldState == null) return;
                     this.stateSystem.SetCurrentState(oldState);
                 }
                 else
@@ -817,7 +814,8 @@ namespace Code.Network.StateSystem
             }
             
             // Process the buffer of states that we've gotten from the authoritative client
-            State latestState = null;
+            bool latestStateFound = false;
+            State latestState = default;
             var hasTicked = false;
             var additionalStatesProcessed = 0;
             do
@@ -828,30 +826,29 @@ namespace Code.Network.StateSystem
                 // }
 
                 // Attempt to get a new state out of the buffer.
-                latestState = this.serverReceivedStateBuffer.Count > 0
-                    ? this.serverReceivedStateBuffer.Values[0]
-                    : null;
+                latestStateFound = this.serverReceivedStateBuffer.Count > 0;
+                latestState = latestStateFound ? this.serverReceivedStateBuffer.Values[0] : default;
                 var expectedNextCommandNumber = this.serverLastProcessedCommandNumber + 1;
 
                 // If we have a new state to process, update our last processed command and then remove it.
-               
-                if (latestState != null && latestState.lastProcessedCommand == expectedNextCommandNumber) {
+
+                if (latestStateFound && latestState.lastProcessedCommand == expectedNextCommandNumber) {
                     // mark this as our latest state and remove it. We will do the real processing on the final
                     // state retrieved during this loop later.
                     this.serverLastProcessedCommandNumber = latestState.lastProcessedCommand;
                     this.serverReceivedStateBuffer.RemoveAt(0);
                     if (hasTicked) additionalStatesProcessed++;
                     // print("using new valid state");
-                } else if (latestState != null && latestState.lastProcessedCommand != expectedNextCommandNumber) {
+                } else if (latestStateFound && latestState.lastProcessedCommand != expectedNextCommandNumber) {
                     serverLastProcessedCommandNumber = expectedNextCommandNumber;
                     // TODO: We could be a little more clever with gaps in received state. We could interpolate between last and next if one exists
-                    latestState = null;
-                    
+                    latestStateFound = false;
+
                     // State gaps are never improved by a larger target buffer size except in cases where jitter
                     // is larger than the min buffer size (which is basically never). Instead of varying the target
-                    // buffer size unnecessarily, we'll just leave it as is. (no serverCommandBufferMisses++ or 
+                    // buffer size unnecessarily, we'll just leave it as is. (no serverCommandBufferMisses++ or
                     // serverCommandBufferTargetSize increase)
-                    
+
                     // print($"[{Time.frameCount}] Gap in state {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
                 } else {
                     // print($"[{Time.frameCount}] No states available {serverReceivedStateBuffer.Count}/{serverCommandBufferMaxSize} target {serverCommandBufferTargetSize}");
@@ -869,7 +866,7 @@ namespace Code.Network.StateSystem
             serverCommandCatchUpRequired = 0;
 
             // Commit the last processed snapshot to our state history
-            if (latestState != null)
+            if (latestStateFound)
             {
                 if (this.connectionToClient != null) {
                     // Difference between the most recently arrived cmd# and the cmd# you're processing (assuming constant tick time and no loss)
@@ -887,6 +884,7 @@ namespace Code.Network.StateSystem
                 latestState.tick = tick;
                 latestState.time = time;
                 this.serverLastObservedState = latestState;
+                this.serverLastObservedStateSet = true;
                 // Use this as the current state for the server
                 this.stateSystem.SetCurrentState(latestState);
                 // Since it's new, update our server interpolation functions
@@ -895,11 +893,11 @@ namespace Code.Network.StateSystem
         }
 
         public void NonAuthServerCaptureSnapshot(int tick, double time, bool replay) {
-            if (this.serverLastObservedState != null) {
+            if (this.serverLastObservedStateSet) {
                 // Non server auth will accept the client auth as the official position. No need to get
                 // the state after the physics tick as the position that was pulled from the buffer in OnTick
                 // is the official position.
-                var authState = this.serverLastObservedState.Clone() as State;
+                var authState = (State)this.serverLastObservedState.Clone();
                 authState.tick = tick;
                 authState.time = time;
                 this.stateHistory.Set(tick, authState);
@@ -914,8 +912,7 @@ namespace Code.Network.StateSystem
 
         public void NonAuthServerSetSnapshot(int tick)
         {
-            var state = this.stateHistory.GetExact(tick);
-            if (state == null)
+            if (!this.stateHistory.TryGetExact(tick, out var state))
             {
                 // In the case where there's no state to roll back to, we simply leave the state system where it is. This technically means
                 // that freshly spawned players will exist in rollback when they shouldn't but we won't handle that edge case for now.
@@ -995,23 +992,23 @@ namespace Code.Network.StateSystem
         {
             // No actions on observing tick.
             if (replay) {
+                if (this.stateHistory.Keys.Count == 0) return;
                 var authoritativeState = this.stateHistory.Get(tick);
-                if (authoritativeState == null) return;
-                
                 this.stateSystem.SetCurrentState(authoritativeState);
                 return;
             }
-            
+
             // Get the authoritative state received just before the current observer time. (remember interpolation is buffered by bufferTime)
             // Note: if we get multiple fixed update calls per frame, we will use the same state for all fixedUpdate calls
             // because NetworkTime.time is only advanced on Update(). This might cause resim issues with low framerates...
-            var observedState = this.observerHistory.Get(NetworkTime.time);
-            if (observedState == null)
+            if (this.observerHistory.Values.Count == 0)
             {
                 // We don't have state to use for interping or we haven't reached a new state yet. Don't add any
                 // data to our state history.
                 return;
             }
+            
+            var observedState = this.observerHistory.Get(NetworkTime.time);
 
             // Only add to local timeline if we care about replay
             if (replayForObservers) {
@@ -1024,7 +1021,7 @@ namespace Code.Network.StateSystem
                 // local timeline for resims.
                 this.stateHistory.Add(tick, state);
             }
-
+            
             // We don't call SetCurrentState because we control the actual position of the character
             // in the LateUpdate Interpolate() call. The currentSnapshot will be update by InterpolateReachedState()
             // below once we hit a new snapshot.
@@ -1038,8 +1035,8 @@ namespace Code.Network.StateSystem
         }
 
         public void ObservingClientSetSnapshot(int tick) {
+            if (this.stateHistory.Keys.Count == 0) return;
             var authoritativeState = this.stateHistory.Get(tick);
-            if (authoritativeState == null) return;
             this.stateSystem.SetCurrentState(authoritativeState);
         }
 
@@ -1123,17 +1120,19 @@ namespace Code.Network.StateSystem
             // Our predicted state history will only have frame that matches the lastProcessedCommand, but
             // keep in mind that the server may send us more than one frame with the same lastProcessedCommand
             // due to packet loss/delay. We have to re-simulate in those cases too if the state has changed
-            State clientPredictedState = null;
+            bool clientPredictedStateFound = false;
+            State clientPredictedState = default;
             foreach (var predictedState in this.stateHistory.Values)
             {
                 if (predictedState.lastProcessedCommand == state.lastProcessedCommand)
                 {
                     clientPredictedState = predictedState;
+                    clientPredictedStateFound = true;
                     break;
                 }
             }
 
-            if (clientPredictedState == null)
+            if (!clientPredictedStateFound)
             {
                 // If we can't find a predicted state entry, we will consider this prediction to be correct since
                 // we wouldn't be able to reconcile it with an actual prediction.
@@ -1164,7 +1163,7 @@ namespace Code.Network.StateSystem
             
             // We use the client prediction time so we can act like we got this right in our history. Server gives us
             // a time value in its local timeline so the provided time is not useful to us.
-            var newState = state.Clone() as State;
+            var newState = (State)state.Clone();
             newState.tick = clientPredictedState.tick;
             newState.time = clientPredictedState.time;
             
@@ -1183,7 +1182,6 @@ namespace Code.Network.StateSystem
         #region Networking
 
         private void ProcessNewStateOnClient(State state) {
-            if (state == null) return;
             
             // Observers record all snapshots received, even if they are the same tick values. This allows us to
             // interpolate over unscaledTime accurately. The remote timestamp is what the server was rendering
@@ -1208,15 +1206,16 @@ namespace Code.Network.StateSystem
             if (isOwned && serverAuth) {
                 // We just got a new confirmed state and we have already processed
                 // our most recent reconcile.
-                if (this.clientLastConfirmedState == null) {
+                if (!this.clientLastConfirmedStateSet) {
                     // Store the state so we can use it when the callback is fired.
                     this.clientLastConfirmedState = state;
+                    this.clientLastConfirmedStateSet = true;
                     // Schedule the resimulation with the simulation manager.
                     AirshipSimulationManager.Instance.ScheduleResimulation((resimulate) => {
                         // Reconcile when this callback is executed. Use the last confirmed state received,
                         // (since more could come in from the network while we are waiting for the callback)
                         this.ReconcileInputHistory(resimulate, this.clientLastConfirmedState);
-                        this.clientLastConfirmedState = null;
+                        this.clientLastConfirmedStateSet = false;
                     });
                 }
                 // We received a new state update before we were able to reconcile, just update the stored
@@ -1239,8 +1238,7 @@ namespace Code.Network.StateSystem
         }
 
         private void ClientReceiveDiff(StateDiff diff) {
-            var baseState = this.baseHistory.GetExact(diff.baseTick);
-            if (baseState == null) {
+            if (!this.baseHistory.TryGetExact(diff.baseTick, out var baseState)) {
                 // TODO: We could reduce network by throttling this so we only call it once
                 // per round trip time + a little buffer for the send interval. Right now, we
                 // will call this until our request reaches the server and the snapshot gets sent
@@ -1262,7 +1260,7 @@ namespace Code.Network.StateSystem
             // Call the standard receive snapshot logic, since we've build the new snapshot received from the server.
             // This will also add the generated snapshot to the observerHistory so that it can be used as a base for new
             // diffs if required.
-            this.ProcessNewStateOnClient(snapshot as State);
+            this.ProcessNewStateOnClient((State)snapshot);
         }
 
         private void ProcessClientInputOnServer(Input command) {
@@ -1342,8 +1340,6 @@ namespace Code.Network.StateSystem
             // Debug.Log($"[{Time.frameCount}] Server receive snapshot" + snapshot.lastProcessedCommand + " data: " + snapshot.ToString());
             // This should only occur if the server is not authoritative.
             if (serverAuth) return;
-
-            if (snapshot == null) return;
                 
             if (this.serverReceivedStateBuffer.TryGetValue(snapshot.lastProcessedCommand, out State existingInput))
             {

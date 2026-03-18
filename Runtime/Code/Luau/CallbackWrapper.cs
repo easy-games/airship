@@ -109,7 +109,7 @@ namespace Luau
                 Profiler.BeginSample(profilerTagName);
 #endif
                 Profiler.BeginSample("WriteProperties");
-                LuauCore.WritePropertyToThread(this.thread, param0);
+                LuauCore.WritePropertyToThread<A>(this.thread, param0);
                 Profiler.EndSample();
                 System.Int32 integer = (System.Int32)handle;
                 int retValue = LuauPlugin.CallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);

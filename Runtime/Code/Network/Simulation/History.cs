@@ -204,6 +204,11 @@ namespace Code.Network.Simulation
             return value;
         }
 
+        public bool TryGetExact(int tick, out T value)
+        {
+            return this.history.TryGetValue(tick, out value);
+        }
+
         /**
          * Gets all entries after the provided tick. Does _not_ get the
          * entry at that tick.
