@@ -47,6 +47,7 @@ public class SocketManager : Singleton<SocketManager> {
 #endif
 
     private void Awake() {
+        base.Awake();
         DontDestroyOnLoad(this);
     }
 
