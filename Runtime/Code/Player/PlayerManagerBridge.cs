@@ -46,6 +46,7 @@ namespace Code.Player {
         private ServerBootstrap serverBootstrap;
 
         private void Awake() {
+            base.Awake();
             coreScene = SceneManager.GetSceneByName("CoreScene");
             serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
         }

@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -47,6 +48,14 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 				}
 			}
 			return _instance;
+		}
+	}
+
+	public virtual void Awake() {
+		if (_instance == null) {
+			_instance = this as T;
+		} else {
+			Destroy(this.gameObject);
 		}
 	}
 

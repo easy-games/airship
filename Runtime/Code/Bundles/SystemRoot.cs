@@ -42,6 +42,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private bool loadInProgress = false;
 
 	private void Awake() {
+		base.Awake();
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
 	}

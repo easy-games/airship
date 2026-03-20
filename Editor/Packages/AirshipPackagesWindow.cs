@@ -604,12 +604,13 @@ namespace Editor.Packages {
             {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
-                var paths = new List<string>();
+                var paths = new List<(string gamePath, string assetPath)>();
                 var scopedId = packageDoc.id.ToLowerInvariant();
                 foreach (var guid in binaryFileGuids) {
-                    var path = AssetDatabase.GUIDToAssetPath(guid).ToLowerInvariant();
-                    if (path.StartsWith("assets/airshippackages/" + scopedId + "/")) {
-                        paths.Add(path);
+                    var assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                    var gamePath = assetPath.ToLowerInvariant();
+                    if (gamePath.StartsWith("assets/airshippackages/" + scopedId + "/")) {
+                        paths.Add((gamePath, assetPath));
                     }
                 }
 
@@ -617,15 +618,15 @@ namespace Editor.Packages {
                     File.Delete(codeZipPath);
                 }
                 var codeZip = new ZipFile();
-                foreach (var path in paths) {
+                foreach (var (path, fsPath) in paths) {
                     // GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
                     string luaOutPath;
                     if (path.EndsWith(".lua")) {
                         // This is the case for .lua files in the source code.
-                        luaOutPath = path;
+                        luaOutPath = fsPath;
                     } else {
                         // Get the lua path from a .ts file.
-                        luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
+                        luaOutPath = TypescriptProjectsService.Project.GetOutputPath(fsPath);
                         if (!File.Exists(luaOutPath)) {
                             Debug.LogWarning("Missing lua file: " + luaOutPath);
                             continue;

@@ -53,6 +53,7 @@ public class MessagingManager : Singleton<MessagingManager>
     private static ServerBootstrap serverBootstrap;
 
     private void Awake() {
+        base.Awake();
         DontDestroyOnLoad(this);
     }
 
