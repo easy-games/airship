@@ -133,7 +133,7 @@ public static class LuauPlugin {
 #endif
     }
 	
-    public static void InitializeComponentCallbacks(LuauPluginNative.ComponentSetEnabledCallback setEnabledCallback) {
+    public static void InitializeComponentCallbacks(IntPtr setEnabledCallback) {
 	    ThreadSafetyCheck();
 		LuauPluginNative.InitializeComponentCallbacks(setEnabledCallback);
     }
@@ -143,7 +143,7 @@ public static class LuauPlugin {
         return LuauPluginNative.Startup(pluginStartup);
     }
 	
-	public static void InitializePrintCallback(LuauPluginNative.PrintCallback printCallback) {
+	public static void InitializePrintCallback(IntPtr printCallback) {
 		LuauPluginNative.TryInitPlugin();
 		ThreadSafetyCheck();
 		LuauPluginNative.InitializePrintCallback(printCallback);

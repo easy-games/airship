@@ -2,6 +2,7 @@
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using UnityEngine;
 
 namespace NativePlugins {
 	public static class NativeLibUtil {
@@ -66,7 +67,7 @@ namespace NativePlugins {
 		private static extern uint GetLastError();
 
 		[DllImport("kernel32.dll")]
-		private static extern uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, uint dwExtraInfo, out IntPtr lpBuffer, uint nSize);
+		private static extern uint FormatMessageW(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, out IntPtr lpBuffer, uint nSize, IntPtr args);
 
 		[DllImport("kernel32.dll")]
 		private static extern uint LocalFree(IntPtr ptr);
@@ -88,14 +89,14 @@ namespace NativePlugins {
 		private static bool TryGetError(out string error) {
 			var errCode = GetLastError();
 			if (errCode != 0) {
-				var size = FormatMessage(
+				var size = FormatMessageW(
 					FormatMessageAllocateBuffer | FormatMessageFromSystem | FormatMessageIgnoreInserts,
 					IntPtr.Zero,
 					errCode,
 					0,
-					0,
 					out var errPtr,
-					0
+					0,
+					IntPtr.Zero
 				);
 				if (size != 0) {
 					error = Marshal.PtrToStringUni(errPtr, (int)size);

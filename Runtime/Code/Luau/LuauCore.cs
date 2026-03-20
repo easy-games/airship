@@ -21,7 +21,7 @@ public partial class LuauCore : MonoBehaviour {
     [InitializeOnLoad]
     private class LuauCorePrintCallbackLoader {
         static LuauCorePrintCallbackLoader() {
-            LuauPlugin.InitializePrintCallback(printCallback_holder);
+            LuauPlugin.InitializePrintCallback(Marshal.GetFunctionPointerForDelegate(printCallback_holder));
         }
     }
 #endif
@@ -137,20 +137,20 @@ public partial class LuauCore : MonoBehaviour {
         var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
         var stringLengthsHandle = GCHandle.Alloc(stringLenList, GCHandleType.Pinned);
         
-        LuauPlugin.InitializePrintCallback(printCallback_holder);
-        LuauPlugin.InitializeComponentCallbacks(componentSetEnabledCallback_holder);
+        LuauPlugin.InitializePrintCallback(Marshal.GetFunctionPointerForDelegate(printCallback_holder));
+        LuauPlugin.InitializeComponentCallbacks(Marshal.GetFunctionPointerForDelegate(componentSetEnabledCallback_holder));
         LuauPlugin.Startup(
             new LuauPluginNative.LuauPluginStartup {
-                getPropertyCallback = getPropertyCallback_holder,
-                setPropertyCallback = setPropertyCallback_holder,
-                callMethodCallback = callMethodCallback_holder,
-                objectGcCallback = objectGCCallback_holder,
-                requireCallback = requireCallback_holder,
-                constructorCallback = constructorCallback_holder,
-                toStringCallback = toStringCallback_holder,
-                isObjectDestroyedCallback = isObjectDestroyedCallback_holder,
-                getUnityObjectNameCallback = getUnityObjectNameCallback_holder,
-                resolveRequirePathCallback = null,
+                getPropertyCallback = Marshal.GetFunctionPointerForDelegate(getPropertyCallback_holder),
+                setPropertyCallback = Marshal.GetFunctionPointerForDelegate(setPropertyCallback_holder),
+                callMethodCallback = Marshal.GetFunctionPointerForDelegate(callMethodCallback_holder),
+                objectGcCallback = Marshal.GetFunctionPointerForDelegate(objectGCCallback_holder),
+                requireCallback = Marshal.GetFunctionPointerForDelegate(requireCallback_holder),
+                constructorCallback = Marshal.GetFunctionPointerForDelegate(constructorCallback_holder),
+                toStringCallback = Marshal.GetFunctionPointerForDelegate(toStringCallback_holder),
+                isObjectDestroyedCallback = Marshal.GetFunctionPointerForDelegate(isObjectDestroyedCallback_holder),
+                getUnityObjectNameCallback = Marshal.GetFunctionPointerForDelegate(getUnityObjectNameCallback_holder),
+                resolveRequirePathCallback = IntPtr.Zero, // Keeping this null makes the plugin default to an internal path resolver
                 staticList = stringAddresses.AddrOfPinnedObject(),
                 staticListStrLen = stringLengthsHandle.AddrOfPinnedObject(),
                 staticCount = stringCount,
