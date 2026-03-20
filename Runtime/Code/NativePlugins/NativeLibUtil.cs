@@ -67,7 +67,7 @@ namespace NativePlugins {
 		private static extern uint GetLastError();
 
 		[DllImport("kernel32.dll")]
-		private static extern uint FormatMessageA(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, out IntPtr lpBuffer, uint nSize, IntPtr args);
+		private static extern uint FormatMessageW(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, out IntPtr lpBuffer, uint nSize, IntPtr args);
 
 		[DllImport("kernel32.dll")]
 		private static extern uint LocalFree(IntPtr ptr);
@@ -89,7 +89,7 @@ namespace NativePlugins {
 		private static bool TryGetError(out string error) {
 			var errCode = GetLastError();
 			if (errCode != 0) {
-				var size = FormatMessageA(
+				var size = FormatMessageW(
 					FormatMessageAllocateBuffer | FormatMessageFromSystem | FormatMessageIgnoreInserts,
 					IntPtr.Zero,
 					errCode,
@@ -99,7 +99,7 @@ namespace NativePlugins {
 					IntPtr.Zero
 				);
 				if (size != 0) {
-					error = Marshal.PtrToStringAnsi(errPtr, (int)size);
+					error = Marshal.PtrToStringUni(errPtr, (int)size);
 					// Need to tell Windows to free the buffer containing the error string:
 					LocalFree(errPtr);
 				} else {
