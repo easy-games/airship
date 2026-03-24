@@ -296,8 +296,8 @@ namespace Code.Player.Character.MovementSystems.Character {
         private void OnPaused(bool paused) {
             if (paused) {
                 correctionLastSimulatedPosition
-                    = airshipTransform
-                        .position; // save the last transform position so that we calculate the difference from where the player sees themselves
+                    = rb
+                        .position; // save the last rb position so that we calculate the difference applied during resimulation
             } else {
                 var goalPosition = rb.position;
                 var difference
@@ -1732,9 +1732,7 @@ namespace Code.Player.Character.MovementSystems.Character {
                 RpcTeleport(position);
                 return;
             }
-
-            // TODO: why? Copied from old movement
-            currentMoveSnapshot.airborneFromImpulse = true;
+            
             rb.position = position;
         }
 
@@ -1750,8 +1748,6 @@ namespace Code.Player.Character.MovementSystems.Character {
                 RpcSetLookVector(lookVector);
             }
 
-            // TODO: why? Copied from old movement
-            currentMoveSnapshot.airborneFromImpulse = true;
             rb.position = position;
             SetLookVectorAndNotifyLuau(lookVector);
         }
