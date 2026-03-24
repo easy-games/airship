@@ -416,6 +416,7 @@ namespace Code.Network.Simulation
             {
                 OnSetPaused?.Invoke(true);
                 OnSetSnapshot?.Invoke(targetTick);
+                Physics.SyncTransforms();
                 // Advance the tick so that we are re-processing the next tick after the base time provided.
                 targetTick++;
                 // index of the tick in the previousTicks list, we use this to access the associated time.
