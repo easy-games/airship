@@ -389,7 +389,6 @@ namespace Luau {
             serializedObject = property.serializedObject;
             modified = property.modified;
             defaultValue = property.defaultValue;
-            Debug.Log($"{property.name} modified to {serializedObject?.ToString() ?? serializedValue} {modified}");
         }
 
         internal bool HasSameTypesAs(LuauMetadataProperty other) {

@@ -229,30 +229,6 @@ namespace Airship.Editor {
             var result = ReconcileMetadata(componentMetadata, scriptMetadata, componentMetadataSerialized, scriptMetadataSerialized);
             return result;
         }
-
-        internal static bool ReconcilePropertyOrder(AirshipComponent component) {
-            var serializedComponent = new SerializedObject(component);
-            var serializedMetadata = serializedComponent.FindProperty(nameof(AirshipComponent.metadata));
-
-            // for (var i = 0; i < serializedMetadata.Copy().arraySize; i++) {
-            //     var item =  serializedMetadata.GetArrayElementAtIndex(i);
-            //     var name = item.FindPropertyRelative("name").stringValue;
-            //
-            //     var destinationIndex = component.metadata.properties.FindIndex(f => f.name == name);
-            //     if (destinationIndex >= 0) {
-            //         serializedMetadata.MoveArrayElement(i, destinationIndex);
-            //     }
-            // }
-            
-            // probably need to do an inline sort here... ?
-            
-            if (serializedComponent.hasModifiedProperties) {
-                serializedComponent.ApplyModifiedProperties();
-                return true;
-            }
-
-            return false;
-        }
         
         internal static bool ReconcilePrefabInstance(AirshipComponent instance, AirshipComponent prefab) {
             var scriptMetadata = prefab.script.m_metadata;
@@ -406,10 +382,6 @@ namespace Airship.Editor {
             // ... then we can force a reconciliation at that point to ensure the data is up-to-date.
 
             if (script == null) return false;
-
-            // if (AirshipLocalArtifactDatabase.instance.TryGetScriptAssetData(script, out var scriptAssetData)) {
-            //     scriptAssetData.metadata.
-            // }
 
             AirshipLocalArtifactDatabase.instance.FindPrefabsWithScript(script);
             if (!reconcileList.TryGetValue(script.assetPath, out var componentSet)) return false;

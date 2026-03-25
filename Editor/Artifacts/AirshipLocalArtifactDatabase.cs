@@ -133,18 +133,6 @@ namespace Airship.Editor {
             return item;
         }
 
-        // internal bool TryGetPrefabComponents(AirshipScript script, out ComponentData[] assetData) {
-        //     var componentDatas = new List<ComponentData>();
-        //     
-        //     foreach (var component in components) {
-        //         if (component.script != script.assetPath || string.IsNullOrEmpty(component.asset)) continue;
-        //         componentDatas.Add(component);
-        //     }
-        //     
-        //     assetData = componentDatas.ToArray();
-        //     return componentDatas.Count > 0;
-        // }
-
         internal void FindPrefabsWithScript(AirshipScript script) {
             SearchService.Request($"prefab:any t:AirshipComponent airshipcomponent.script=\"{script.assetPath}\" a:Assets",
                 (context, items) => {
@@ -209,13 +197,6 @@ namespace Airship.Editor {
 #if AIRSHIP_DEBUG
             Debug.Log($"[LocalArtifactDB] Artifact DB enabled");
 #endif
-            
-            // Dictionary<string, AirshipScript> pathToScript = new();
-            // foreach (var script in Resources.FindObjectsOfTypeAll<AirshipScript>()) {
-            //     if (pathToScript.ContainsKey(script.assetPath)) continue; // skip duplicates
-            //     pathToScript.Add(script.assetPath, script);
-            // }
-            
             // When enabled we kind of want to run a validation of the component list
             Dictionary<string, AirshipComponent> guidToComponent = new();
             foreach (var component in Resources.FindObjectsOfTypeAll<AirshipComponent>()) {
@@ -232,14 +213,6 @@ namespace Airship.Editor {
                 Debug.Log($"[LocalArtifactDB] Clean out component guid {componentData.guid}");
 #endif
             }
-            
-//             foreach (var scriptAssetData in scripts.ToArray()) { /// ???
-//                 if (pathToScript.TryGetValue(scriptAssetData.assetPath, out _)) continue;
-//                 scripts.Remove(scriptAssetData);
-// #if AIRSHIP_DEBUG
-//                 Debug.Log($"[LocalArtifactDB] Clean out script {scriptAssetData.assetPath}");
-// #endif
-//             }
         }
 
         internal void Rebuild() {
