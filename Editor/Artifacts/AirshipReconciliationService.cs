@@ -267,9 +267,6 @@ namespace Airship.Editor {
             var scriptMetadataSerialized = serializedScript.FindProperty(nameof(AirshipScript.m_metadata));
             
             ReconcileMetadata(componentMetadata, scriptMetadata, componentMetadataSerialized, scriptMetadataSerialized);
-            // if (serializedComponent.hasModifiedProperties) {
-            //     serializedComponent.ApplyModifiedProperties();
-            // }
             
             // Add required components
             var requireComponents = scriptMetadata.FindClassDecorators("RequireComponent");
@@ -382,8 +379,6 @@ namespace Airship.Editor {
             // ... then we can force a reconciliation at that point to ensure the data is up-to-date.
 
             if (script == null) return false;
-
-            AirshipLocalArtifactDatabase.instance.FindPrefabsWithScript(script);
             if (!reconcileList.TryGetValue(script.assetPath, out var componentSet)) return false;
             
 #if AIRSHIP_INTERNAL

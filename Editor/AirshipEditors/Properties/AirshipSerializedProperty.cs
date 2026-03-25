@@ -37,7 +37,7 @@ public class AirshipSerializedProperty : AirshipSerializedValue {
     public bool prefabOverride {
         get {
             if (isArray) return array.prefabOverride;
-            return isObject ? serializedObjectValue.prefabOverride : serializedValue.prefabOverride;
+            return isObject ? serializedObjectValue.prefabOverride && isModified : serializedValue.prefabOverride && isModified;
         }
     }
     
