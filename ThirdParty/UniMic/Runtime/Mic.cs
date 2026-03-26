@@ -230,7 +230,9 @@ namespace Adrenak.UniMic {
                 }
 
                 // Remove from the map any device that may have been disconnected
-                var removedDeviceNames = deviceMap.Where(x => !deviceNames.Contains(x.Key));
+                // Airship: ToList is important to avoid concurrent modification (enumerator doesn't resolve to a list,
+                // it just enumerates over the elements).
+                var removedDeviceNames = deviceMap.Where(x => !deviceNames.Contains(x.Key)).ToList();
                 foreach (var removed in removedDeviceNames)
                     deviceMap.Remove(removed.Key);
 
