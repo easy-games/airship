@@ -45,5 +45,31 @@ public class IOSBuildProcessor {
             capManager.WriteToFile();
         }
     }
+
+    /// <summary>
+    /// Fixes absolute paths in the notificationservice extension target added by
+    /// com.unity.services.push-notifications. That package passes the build output path
+    /// (which Unity resolves to absolute) into AddAppExtension and AddFile, baking
+    /// machine-specific paths into the Xcode project. This breaks when the Xcode project
+    /// is built on a different machine (e.g. CI: Unity in Docker, xcodebuild on macOS).
+    /// Must run after the push-notifications post-process (order 1).
+    /// </summary>
+    [PostProcessBuild(2)]
+    static void FixNotificationServiceAbsolutePaths(BuildTarget buildTarget, string path)
+    {
+        if (buildTarget != BuildTarget.iOS)
+            return;
+
+        string pbxprojPath = PBXProject.GetPBXProjectPath(path);
+        string pbxproj = File.ReadAllText(pbxprojPath);
+
+        string absolutePrefix = path.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        if (pbxproj.Contains(absolutePrefix))
+        {
+            pbxproj = pbxproj.Replace(absolutePrefix, "");
+            File.WriteAllText(pbxprojPath, pbxproj);
+        }
+    }
 #endif
 }
