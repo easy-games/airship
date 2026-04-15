@@ -52,12 +52,16 @@ namespace VoxelWorldStuff {
         }
 
         private static bool[] used = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
-        public static void MakeCollision(Chunk src) {
+        public static void MakeCollision(Chunk src, bool temporary = false) {
             GameObject obj = src.GetGameObject();
             if (obj == null)
             {
                 return;
             }
+
+            // Normal rebuilds clear any resim suppressions. Temporary rebuilds preserve them
+            // (used by RemoveSingleVoxelCollision after adding a new suppression).
+            if (!temporary) src.suppressedCollisionPositions.Clear();
 
             // Clear used array
             unsafe {
@@ -65,7 +69,7 @@ namespace VoxelWorldStuff {
             }
 
             List<CollisionDescriptor> collisions = new List<CollisionDescriptor>();
-            
+
             //greedily convert collision into box colliders
             for (int x = 0; x < VoxelWorld.chunkSize; x++) {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++) {
@@ -73,11 +77,13 @@ namespace VoxelWorldStuff {
                         var voxelAtPos = src.GetLocalVoxelDataAt(x, y, z);
                         if (!IsVoxelUsed(x, y, z, used) && voxelAtPos > 0) {
                             if (src.world.GetCollisionType(voxelAtPos) != VoxelBlocks.CollisionType.Solid) continue; // No collision for this block
-                            
+                            if (src.suppressedCollisionPositions.Count > 0 &&
+                                src.suppressedCollisionPositions.Contains(new Vector3Int(x, y, z))) continue;
+
                             //grow a box from this point
                             Vector3Int size = new Vector3Int(1, 1, 1);
                             Vector3Int origin = new Vector3Int(x, y, z);
-                                                        
+
                             while (GrowY(origin, size, src, 0, used) == true) { size.y += 1; } //Grow y Axis first for tall blocks
                             while (GrowX(origin, size, src, 0, used) == true) { size.x += 1; }
                             while (GrowZ(origin, size, src, 0, used) == true) { size.z += 1; }
@@ -160,6 +166,15 @@ namespace VoxelWorldStuff {
 
             var mesh = src.collisionMesh;
             mesh.Clear();
+
+            // An empty mesh (air chunk, or every solid voxel suppressed) can't be assigned to
+            // sharedMesh — Unity logs an error for zero-vertex mesh colliders. Leave sharedMesh
+            // null in that case so the collider is simply inert.
+            if (meshVertices.Count == 0) {
+                src.collisionMeshCollider.sharedMesh = null;
+                return;
+            }
+
             // Worst case unmerged: chunkSize^3 boxes * 8 verts = 32768 (fits in UInt16).
             mesh.indexFormat = IndexFormat.UInt16;
             mesh.SetVertices(meshVertices);
@@ -265,16 +280,18 @@ namespace VoxelWorldStuff {
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
                     var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
-                    
+
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
+                    if (src.suppressedCollisionPositions.Count > 0 &&
+                        src.suppressedCollisionPositions.Contains(new Vector3Int(xx, yy, zz))) return false;
                 }
             }
             return true;
         }
 
-  
+
 
         /// <param name="targetVoxel">If target voxel is 0 we will not target a specific voxel type for growth, instead we'll just check that a voxel exists (non-zero)</param>
         private static bool GrowY(Vector3Int origin, Vector3Int size, Chunk src, ushort targetVoxel, bool[] usedVoxels) {
@@ -287,10 +304,12 @@ namespace VoxelWorldStuff {
 
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
                     var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
-                    
+
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
+                    if (src.suppressedCollisionPositions.Count > 0 &&
+                        src.suppressedCollisionPositions.Contains(new Vector3Int(xx, yy, zz))) return false;
                 }
             }
             return true;
@@ -316,18 +335,20 @@ namespace VoxelWorldStuff {
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
                     var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
-                    
+
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
+                    if (src.suppressedCollisionPositions.Count > 0 &&
+                        src.suppressedCollisionPositions.Contains(new Vector3Int(xx, yy, zz))) return false;
                 }
             }
             return true;
         }
 
-        // With the single-MeshCollider approach the baked mesh cannot be split cheaply. A sidecar
-        // BoxCollider may have been added by WriteTemporaryCollision(true) — if so destroy it. If
-        // the voxel being hidden lives inside the baked mesh instead, force a full rebuild.
+        // With the single-MeshCollider approach the baked mesh cannot be split cheaply. If a sidecar
+        // BoxCollider was added by WriteTemporaryCollision(true), destroy it. Otherwise the voxel
+        // lives inside the baked mesh — add it to the suppression set and re-bake in place.
         public static void RemoveSingleVoxelCollision(Chunk chunk, Vector3 pos) {
             for (int i = 0; i < chunk.colliders.Count; i++) {
                 var bc = chunk.colliders[i];
@@ -339,7 +360,14 @@ namespace VoxelWorldStuff {
                     return;
                 }
             }
-            chunk.MainthreadForceCollisionRebuild();
+
+            var local = Vector3Int.FloorToInt(pos) - chunk.bottomLeftInt;
+            if (local.x >= 0 && local.x < VoxelWorld.chunkSize &&
+                local.y >= 0 && local.y < VoxelWorld.chunkSize &&
+                local.z >= 0 && local.z < VoxelWorld.chunkSize) {
+                chunk.suppressedCollisionPositions.Add(local);
+            }
+            MakeCollision(chunk, temporary: true);
         }
 
         public static void MakeCollider(Chunk chunk, Vector3 pos, Vector3Int size)
