@@ -156,7 +156,11 @@ namespace VoxelWorldStuff {
 
 
         private GameObject parent;
+        // Transient sidecar BoxColliders used by WriteTemporaryCollision for server-authoritative
+        // resim. Static chunk collision lives on collisionMeshCollider / collisionMesh below.
         public List<BoxCollider> colliders = new();
+        public MeshCollider collisionMeshCollider;
+        public Mesh collisionMesh;
 
         private MeshProcessor meshProcessor;
 
@@ -431,6 +435,17 @@ namespace VoxelWorldStuff {
                     else Object.DestroyImmediate(detailMesh);
                 }
             }
+        }
+
+        // Separate from DestroyAllMeshes because the collision mesh outlives individual visual
+        // re-meshes — the visual mesh is rebuilt on block damage/color changes without a matching
+        // collision rebuild, so destroying collision in DestroyAllMeshes would strip collisions.
+        public void DestroyCollisionMesh() {
+            if (collisionMesh == null) return;
+            if (collisionMeshCollider != null) collisionMeshCollider.sharedMesh = null;
+            if (Application.isPlaying) Object.Destroy(collisionMesh);
+            else Object.DestroyImmediate(collisionMesh);
+            collisionMesh = null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
