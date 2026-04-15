@@ -7,7 +7,7 @@ using Debug = UnityEngine.Debug;
 
 public class LuauCompiler {
     // Any globals in Luau that have values that change need to be added to this list (e.g. "Time" because "Time.time" changes):
-    public static readonly string[] MutableGlobals = {"Time", "NetworkTime", "Physics", "Screen", "Input", "AirshipSimulationManager"};
+    public static readonly string[] MutableGlobals = {"Time", "NetworkTime", "Physics", "Screen", "Input", "AirshipSimulationManager", "Application"};
 
     [StructLayout(LayoutKind.Sequential)]
     public struct CompilationResult {
