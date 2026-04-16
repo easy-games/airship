@@ -1000,6 +1000,7 @@ public partial class VoxelWorld : MonoBehaviour {
 #endif
         foreach (var chunk in chunks) {
             chunk.Value.DestroyAllMeshes();
+            chunk.Value.DestroyCollisionMesh();
         }
 
         if (chunksFolder) {

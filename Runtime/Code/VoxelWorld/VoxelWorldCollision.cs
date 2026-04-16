@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Vector3 = UnityEngine.Vector3;
 
 namespace VoxelWorldStuff {
@@ -17,9 +18,9 @@ namespace VoxelWorldStuff {
             public Vector3Int size;
         }
         
-        // Pre-allocated array to check for overlap results
-        private static Collider[] chunkOverlapResults = new Collider[1];
-        
+        private static readonly List<Vector3> meshVertices = new();
+        private static readonly List<int> meshTriangles = new();
+
         public static void ClearCollision(Chunk src)
         {
             src.colliders.Clear();
@@ -45,17 +46,22 @@ namespace VoxelWorldStuff {
                     Object.DestroyImmediate(collider);
                 }
             }
-            
 
+            if (src.collisionMeshCollider != null) src.collisionMeshCollider.sharedMesh = null;
+            if (src.collisionMesh != null) src.collisionMesh.Clear();
         }
 
         private static bool[] used = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
-        public static void MakeCollision(Chunk src) {
+        public static void MakeCollision(Chunk src, bool temporary = false) {
             GameObject obj = src.GetGameObject();
             if (obj == null)
             {
                 return;
             }
+
+            // Normal rebuilds clear any resim suppressions. Temporary rebuilds preserve them
+            // (used by RemoveSingleVoxelCollision after adding a new suppression).
+            if (!temporary) src.suppressedCollisionPositions.Clear();
 
             // Clear used array
             unsafe {
@@ -63,7 +69,7 @@ namespace VoxelWorldStuff {
             }
 
             List<CollisionDescriptor> collisions = new List<CollisionDescriptor>();
-            
+
             //greedily convert collision into box colliders
             for (int x = 0; x < VoxelWorld.chunkSize; x++) {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++) {
@@ -71,11 +77,13 @@ namespace VoxelWorldStuff {
                         var voxelAtPos = src.GetLocalVoxelDataAt(x, y, z);
                         if (!IsVoxelUsed(x, y, z, used) && voxelAtPos > 0) {
                             if (src.world.GetCollisionType(voxelAtPos) != VoxelBlocks.CollisionType.Solid) continue; // No collision for this block
-                            
+                            if (src.suppressedCollisionPositions.Count > 0 &&
+                                src.suppressedCollisionPositions.Contains(new Vector3Int(x, y, z))) continue;
+
                             //grow a box from this point
                             Vector3Int size = new Vector3Int(1, 1, 1);
                             Vector3Int origin = new Vector3Int(x, y, z);
-                                                        
+
                             while (GrowY(origin, size, src, 0, used) == true) { size.y += 1; } //Grow y Axis first for tall blocks
                             while (GrowX(origin, size, src, 0, used) == true) { size.x += 1; }
                             while (GrowZ(origin, size, src, 0, used) == true) { size.z += 1; }
@@ -92,34 +100,94 @@ namespace VoxelWorldStuff {
                 }
             }
 
-            src.colliders.RemoveAll(collider => collider == null);
+            // Bake all merged boxes into a single MeshCollider for this chunk.
+            BuildCollisionMesh(src, collisions);
+        }
 
-            // Update existing collider properties and spawn new colliders if necessary
-            int i = 0;
-            for (; i < collisions.Count; i++) {
-                var collisionDescriptor = collisions[i];
-                if (i < src.colliders.Count) {
-                    var collider = src.colliders[i];
-                    collider.center = collisionDescriptor.position;
-                    collider.size = collisionDescriptor.size;
-                } else {
-                    MakeCollider(src, collisionDescriptor.position, collisionDescriptor.size);
-                }
+        private static void BuildCollisionMesh(Chunk src, List<CollisionDescriptor> collisions) {
+            if (src.collisionMesh == null) {
+                src.collisionMesh = new Mesh {
+                    name = "VoxelWorldChunkCollision",
+                    hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild,
+                };
+            }
+            if (src.collisionMeshCollider == null) {
+                var obj = src.GetGameObject();
+                var mc = obj.GetComponent<MeshCollider>();
+                if (mc == null) mc = obj.AddComponent<MeshCollider>();
+                mc.convex = false;
+                src.collisionMeshCollider = mc;
             }
 
-            // Destroy any excess colliders
-            var removeStart = i;
-            var removeLength = src.colliders.Count - i;
-            for (; i < src.colliders.Count; i++) {
-#if UNITY_EDITOR
-                if (!Application.isPlaying) {
-                    Object.DestroyImmediate(src.colliders[i]);
-                    continue;
-                }
-#endif
-                Object.Destroy(src.colliders[i]);
+            meshVertices.Clear();
+            meshTriangles.Clear();
+
+            for (int i = 0; i < collisions.Count; i++) {
+                var d = collisions[i];
+                float halfX = d.size.x * 0.5f;
+                float halfY = d.size.y * 0.5f;
+                float halfZ = d.size.z * 0.5f;
+                float minX = d.position.x - halfX;
+                float minY = d.position.y - halfY;
+                float minZ = d.position.z - halfZ;
+                float maxX = d.position.x + halfX;
+                float maxY = d.position.y + halfY;
+                float maxZ = d.position.z + halfZ;
+
+                int v = meshVertices.Count;
+                meshVertices.Add(new Vector3(minX, minY, minZ)); // 0
+                meshVertices.Add(new Vector3(maxX, minY, minZ)); // 1
+                meshVertices.Add(new Vector3(maxX, maxY, minZ)); // 2
+                meshVertices.Add(new Vector3(minX, maxY, minZ)); // 3
+                meshVertices.Add(new Vector3(minX, minY, maxZ)); // 4
+                meshVertices.Add(new Vector3(maxX, minY, maxZ)); // 5
+                meshVertices.Add(new Vector3(maxX, maxY, maxZ)); // 6
+                meshVertices.Add(new Vector3(minX, maxY, maxZ)); // 7
+
+                // -z face
+                meshTriangles.Add(v + 0); meshTriangles.Add(v + 2); meshTriangles.Add(v + 1);
+                meshTriangles.Add(v + 0); meshTriangles.Add(v + 3); meshTriangles.Add(v + 2);
+                // +z face
+                meshTriangles.Add(v + 5); meshTriangles.Add(v + 7); meshTriangles.Add(v + 4);
+                meshTriangles.Add(v + 5); meshTriangles.Add(v + 6); meshTriangles.Add(v + 7);
+                // -x face
+                meshTriangles.Add(v + 4); meshTriangles.Add(v + 3); meshTriangles.Add(v + 0);
+                meshTriangles.Add(v + 4); meshTriangles.Add(v + 7); meshTriangles.Add(v + 3);
+                // +x face
+                meshTriangles.Add(v + 1); meshTriangles.Add(v + 6); meshTriangles.Add(v + 2);
+                meshTriangles.Add(v + 1); meshTriangles.Add(v + 5); meshTriangles.Add(v + 6);
+                // -y face
+                meshTriangles.Add(v + 4); meshTriangles.Add(v + 1); meshTriangles.Add(v + 5);
+                meshTriangles.Add(v + 4); meshTriangles.Add(v + 0); meshTriangles.Add(v + 1);
+                // +y face
+                meshTriangles.Add(v + 3); meshTriangles.Add(v + 6); meshTriangles.Add(v + 2);
+                meshTriangles.Add(v + 3); meshTriangles.Add(v + 7); meshTriangles.Add(v + 6);
             }
-            if (removeLength > 0) src.colliders.RemoveRange(removeStart, removeLength);
+
+            var mesh = src.collisionMesh;
+            mesh.Clear();
+
+            // An empty mesh (air chunk, or every solid voxel suppressed) can't be assigned to
+            // sharedMesh — Unity logs an error for zero-vertex mesh colliders. Leave sharedMesh
+            // null in that case so the collider is simply inert.
+            if (meshVertices.Count == 0) {
+                src.collisionMeshCollider.sharedMesh = null;
+                return;
+            }
+
+            // Worst case unmerged: chunkSize^3 boxes * 8 verts = 32768 (fits in UInt16).
+            mesh.indexFormat = IndexFormat.UInt16;
+            mesh.SetVertices(meshVertices);
+            mesh.SetTriangles(meshTriangles, 0, false);
+            int cs = VoxelWorld.chunkSize;
+            mesh.bounds = new Bounds(
+                new Vector3(src.bottomLeftInt.x + cs * 0.5f, src.bottomLeftInt.y + cs * 0.5f, src.bottomLeftInt.z + cs * 0.5f),
+                new Vector3(cs, cs, cs));
+
+            // Null-then-set forces PhysX to re-bake the mesh's collision data — Unity does
+            // not always pick up geometry mutations when the reference is unchanged.
+            src.collisionMeshCollider.sharedMesh = null;
+            src.collisionMeshCollider.sharedMesh = mesh;
         }
 
         public static List<GreedyMeshRegion> GreedyMesh(Chunk src) {
@@ -212,16 +280,18 @@ namespace VoxelWorldStuff {
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
                     var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
-                    
+
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
+                    if (src.suppressedCollisionPositions.Count > 0 &&
+                        src.suppressedCollisionPositions.Contains(new Vector3Int(xx, yy, zz))) return false;
                 }
             }
             return true;
         }
 
-  
+
 
         /// <param name="targetVoxel">If target voxel is 0 we will not target a specific voxel type for growth, instead we'll just check that a voxel exists (non-zero)</param>
         private static bool GrowY(Vector3Int origin, Vector3Int size, Chunk src, ushort targetVoxel, bool[] usedVoxels) {
@@ -234,10 +304,12 @@ namespace VoxelWorldStuff {
 
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
                     var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
-                    
+
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
+                    if (src.suppressedCollisionPositions.Count > 0 &&
+                        src.suppressedCollisionPositions.Contains(new Vector3Int(xx, yy, zz))) return false;
                 }
             }
             return true;
@@ -263,68 +335,40 @@ namespace VoxelWorldStuff {
                     if (IsVoxelUsed(xx, yy, zz, usedVoxels)) return false;
 
                     var voxelAt = src.GetLocalVoxelDataAt(xx, yy, zz);
-                    
+
                     if (src.world.GetCollisionType(voxelAt) != VoxelBlocks.CollisionType.Solid) return false; // No collision for this block
                     if (targetVoxel == 0 && voxelAt == 0) return false; // We're targeting any block but no block is found
                     if (targetVoxel > 0 && targetVoxel != voxelAt) return false; // This is not our target voxel
+                    if (src.suppressedCollisionPositions.Count > 0 &&
+                        src.suppressedCollisionPositions.Contains(new Vector3Int(xx, yy, zz))) return false;
                 }
             }
             return true;
         }
 
+        // With the single-MeshCollider approach the baked mesh cannot be split cheaply. If a sidecar
+        // BoxCollider was added by WriteTemporaryCollision(true), destroy it. Otherwise the voxel
+        // lives inside the baked mesh — add it to the suppression set and re-bake in place.
         public static void RemoveSingleVoxelCollision(Chunk chunk, Vector3 pos) {
-            var chunkGO = chunk.GetGameObject();
-            var resultCount = Physics.OverlapBoxNonAlloc(pos, Vector3.one / 3, chunkOverlapResults, chunkGO.transform.rotation, 1 << chunkGO.layer, QueryTriggerInteraction.Ignore);
-            if (resultCount == 0) return; // Already no collider here
+            for (int i = 0; i < chunk.colliders.Count; i++) {
+                var bc = chunk.colliders[i];
+                if (bc == null) continue;
+                if (bc.center == pos && bc.size == Vector3.one) {
+                    if (Application.isPlaying) Object.Destroy(bc);
+                    else Object.DestroyImmediate(bc);
+                    chunk.colliders.RemoveAt(i);
+                    return;
+                }
+            }
 
-            var colliderToSplit = chunkOverlapResults[0];
-            if (colliderToSplit is not BoxCollider bc) return;
-
-            var bcSize = bc.size;
-            var bcCenter = bc.center;
-            
-            // Pos adjusted so 0,0,0 is the min corner of the size of the collider
-            var minCorner = (bcCenter - bcSize / 2);
-            var posRelativeToSize = Vector3Int.FloorToInt(pos - minCorner);
-            
-            var bcComp = new GameObject("ComponentTrue");
-            bcComp.transform.localScale = bcSize;
-            bcComp.transform.position = bcCenter;
-            
-            // Create 6 new colliders split off
-            if (posRelativeToSize.x > 0) {
-                var size = new Vector3(posRelativeToSize.x, bcSize.y, bcSize.z);
-                var center = new Vector3(minCorner.x + posRelativeToSize.x / 2f, bcCenter.y, bcCenter.z);
-                MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
+            var local = Vector3Int.FloorToInt(pos) - chunk.bottomLeftInt;
+            if (local.x >= 0 && local.x < VoxelWorld.chunkSize &&
+                local.y >= 0 && local.y < VoxelWorld.chunkSize &&
+                local.z >= 0 && local.z < VoxelWorld.chunkSize) {
+                chunk.suppressedCollisionPositions.Add(local);
             }
-            if (posRelativeToSize.x < bcSize.x - 1) {
-                var size = new Vector3(bcSize.x - posRelativeToSize.x - 1, bcSize.y, bcSize.z);
-                var center = new Vector3(minCorner.x + (posRelativeToSize.x + 1) + (bcSize.x - (posRelativeToSize.x + 1)) / 2, bcCenter.y, bcCenter.z);
-                MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
-            }
-            if (posRelativeToSize.y > 0) {
-                var size = new Vector3(1, posRelativeToSize.y, bcSize.z);
-                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + posRelativeToSize.y / 2f, bcCenter.z);
-                MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
-            }
-            if (posRelativeToSize.y < bcSize.y - 1) {
-                var size = new Vector3(1, bcSize.y - posRelativeToSize.y - 1, bcSize.z);
-                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + (posRelativeToSize.y + 1) + (bcSize.y - (posRelativeToSize.y + 1)) / 2, bcCenter.z);
-                MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
-            }
-            if (posRelativeToSize.z > 0) {
-                var size = new Vector3(1, 1, posRelativeToSize.z);
-                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + posRelativeToSize.y + 0.5f, minCorner.z + posRelativeToSize.z / 2f);
-                MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
-            }
-            if (posRelativeToSize.z < bcSize.z - 1) {
-                var size = new Vector3(1, 1, bcSize.z - posRelativeToSize.z - 1);
-                var center = new Vector3(minCorner.x + posRelativeToSize.x + 0.5f, minCorner.y + posRelativeToSize.y + 0.5f, minCorner.z + (posRelativeToSize.z + 1) + (bcSize.z - (posRelativeToSize.z + 1)) / 2);
-                MakeCollider(chunk, center, Vector3Int.FloorToInt(size));
-            }
-            chunk.colliders.Remove(bc);
-            Object.Destroy(bc);
-        } 
+            MakeCollision(chunk, temporary: true);
+        }
 
         public static void MakeCollider(Chunk chunk, Vector3 pos, Vector3Int size)
         {

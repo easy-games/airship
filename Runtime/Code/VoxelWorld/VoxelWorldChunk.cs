@@ -156,7 +156,14 @@ namespace VoxelWorldStuff {
 
 
         private GameObject parent;
+        // Transient sidecar BoxColliders used by WriteTemporaryCollision for server-authoritative
+        // resim. Static chunk collision lives on collisionMeshCollider / collisionMesh below.
         public List<BoxCollider> colliders = new();
+        public MeshCollider collisionMeshCollider;
+        public Mesh collisionMesh;
+        // Local voxel positions excluded from the baked collision mesh by WriteTemporaryCollision
+        // for server-authoritative resim. Cleared by any non-temporary MakeCollision call.
+        public HashSet<Vector3Int> suppressedCollisionPositions = new();
 
         private MeshProcessor meshProcessor;
 
@@ -433,6 +440,17 @@ namespace VoxelWorldStuff {
             }
         }
 
+        // Separate from DestroyAllMeshes because the collision mesh outlives individual visual
+        // re-meshes — the visual mesh is rebuilt on block damage/color changes without a matching
+        // collision rebuild, so destroying collision in DestroyAllMeshes would strip collisions.
+        public void DestroyCollisionMesh() {
+            if (collisionMesh == null) return;
+            if (collisionMeshCollider != null) collisionMeshCollider.sharedMesh = null;
+            if (Application.isPlaying) Object.Destroy(collisionMesh);
+            else Object.DestroyImmediate(collisionMesh);
+            collisionMesh = null;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int WorldPosToVoxelIndex(Vector3Int globalCoord) {
             var chunkCoordinate = VoxelWorld.WorldPosToChunkKey(globalCoord);
@@ -513,6 +531,15 @@ namespace VoxelWorldStuff {
         public void WriteTemporaryCollision(Vector3 position, bool hasCollision) {
             var centerOfPos = Vector3Int.FloorToInt(position) + Vector3.one / 2;
             if (hasCollision) {
+                var local = Vector3Int.FloorToInt(position) - bottomLeftInt;
+                if (local.x >= 0 && local.x < chunkSize &&
+                    local.y >= 0 && local.y < chunkSize &&
+                    local.z >= 0 && local.z < chunkSize &&
+                    suppressedCollisionPositions.Remove(local)) {
+                    // Un-suppressing a baked voxel — re-bake with the suppression removed.
+                    VoxelWorldCollision.MakeCollision(this, temporary: true);
+                    return;
+                }
                 VoxelWorldCollision.MakeCollider(this, centerOfPos, Vector3Int.one);
             } else {
                 VoxelWorldCollision.RemoveSingleVoxelCollision(this, centerOfPos);
