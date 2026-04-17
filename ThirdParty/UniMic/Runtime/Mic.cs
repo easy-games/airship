@@ -360,8 +360,9 @@ namespace Adrenak.UniMic {
                         pcm.Enqueue(sample);
                 }
 
-                // Send as many complete frames from the pcm history as possible
-                frameLen = device.SamplingFrequency * device.FrameDurationMS * device.ChannelCount / 1000;
+                // AIRSHIP mod: 
+                frameLen = device.FrameLength;
+                // END AIRSHIP
                 if (frame == null || frame.Length != frameLen)
                     frame = new float[frameLen];
                 while (pcm.Count >= frame.Length) {
