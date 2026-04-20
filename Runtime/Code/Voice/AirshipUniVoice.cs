@@ -205,6 +205,15 @@ namespace Code.Voice {
         }
 
         public static void StartRecording(Mic.Device mic) {
+            if (mic == null) {
+                Debug.LogError("[AirshipUniVoice] StartRecording called with null mic device.");
+                return;
+            }
+            if (ClientSession == null) {
+                Debug.LogError("[AirshipUniVoice] StartRecording called before voice client session is ready.");
+                return;
+            }
+
             // Since in this sample we use microphone input via UniMic, we first check if there
             // are any mic devices available.
             Mic.Init(); // Must do this to use the Mic class
