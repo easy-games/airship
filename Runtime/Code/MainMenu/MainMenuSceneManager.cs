@@ -198,13 +198,11 @@ public class MainMenuSceneManager : MonoBehaviour {
             true,
             (success, errorMsg) => {
                 if (!success) {
-                    string err;
                     if (string.IsNullOrEmpty(errorMsg)) {
-                        err = "Failed to download game content. An error has occurred";
+                        this.loadingScreen.SetError("Failed to download game content. Please check your connection and press Retry.");
                     } else {
-                        err = "Failed to download game content. An error has occurred: " + errorMsg;
+                        this.loadingScreen.SetError(errorMsg);
                     }
-                    this.loadingScreen.SetError(err);
                     return;
                 }
                 StartCoroutine(StartPackageLoad(packages, true));
