@@ -204,13 +204,7 @@ using Object = UnityEngine.Object;
             internal static string TypescriptLocationCommandLine {
                 get {
                     var path = TypeScriptLocation;
-                    // ReSharper disable once ConvertIfStatementToReturnStatement
-                    if (!path.Contains(" ")) return path;
-#if UNITY_EDITOR_WIN
-                    return $"\"{path}\"";
-#else
-                    return path.Replace(" ", "\\ ");                
-#endif
+                    return !path.Contains(" ") ? path : $"\"{path}\"";
                 }
             }
             
