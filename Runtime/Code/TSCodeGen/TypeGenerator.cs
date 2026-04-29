@@ -125,6 +125,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Dropdown),
             typeof(TMP_Dropdown),
             typeof(CanvasHitDetector),
+            typeof(Collision2D),
 
             // Audio
             typeof(AudioSource),
