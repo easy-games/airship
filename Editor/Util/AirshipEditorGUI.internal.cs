@@ -5,10 +5,12 @@ using Code.Luau;
 using Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
+using Telepathy;
 using Unity.VisualScripting.YamlDotNet.Core.Tokens;
 using UnityEditor;
 using UnityEditor.Actions;
 using UnityEngine;
+using EventType = UnityEngine.EventType;
 using Object = UnityEngine.Object;
 
 public static partial class AirshipEditorGUI {
@@ -59,21 +61,18 @@ public static partial class AirshipEditorGUI {
                     if (serializedProperty.prefabOverride) {
                         var test = L10n.Tr("Apply to Prefab '{0}'");
                         menu.AddItem(new GUIContent(string.Format(test, serializedProperty.prefabInstanceRoot.name)), false, () => {
-                            // PrefabUtility.ApplyPropertyOverride();
                             serializedProperty.ApplyPropertyOverride(InteractionMode.UserAction);
                         });
                         
                         menu.AddItem(new GUIContent("Revert"), false, () => {
                             serializedProperty.RevertPropertyOverride(InteractionMode.UserAction);
                         });
-
-                        // hasPrefabItems = true;
                     } else if (serializedProperty.prefab == null && serializedProperty.isModified) {
                         menu.AddItem(new GUIContent("Reset to Default"), false, () => {
-                            serializedProperty.ResetToDefault();
+                            if (!serializedProperty.ResetToDefault()) {
+                                Debug.LogWarning($"Could not set default value");
+                            }
                         });
-                        
-                        // hasPrefabItems = true;
                     }
   
                     // if (AirshipClipboardUtility.CanCopy(property)) {

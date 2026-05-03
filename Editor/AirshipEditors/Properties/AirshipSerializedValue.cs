@@ -131,6 +131,7 @@ public abstract class AirshipSerializedValue {
             }
 
             serializedObjectValue.objectReferenceValue = value;
+            serializedModified.boolValue = true;
         }
     }
 
@@ -142,6 +143,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (propertyType != AirshipComponentPropertyType.AirshipBoolean) throw new InvalidCastException("Value is not a boolean");
             serializedValue.stringValue = value ? "1" : "0";
+            serializedModified.boolValue = true;
         }
     }
 
@@ -155,6 +157,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (propertyType != AirshipComponentPropertyType.AirshipFloat) throw new InvalidCastException("Value is not a float");
             serializedValue.stringValue = value.ToString(CultureInfo.InvariantCulture);
+            serializedModified.boolValue = true;
         }
     }
 
@@ -172,6 +175,7 @@ public abstract class AirshipSerializedValue {
                 && propertyType != AirshipComponentPropertyType.AirshipInt
                 && propertyType != AirshipComponentPropertyType.AirshipFloat) throw new InvalidCastException("Value is not castable to integer");
             serializedValue.stringValue = value.ToString(CultureInfo.InvariantCulture);
+            serializedModified.boolValue = true;
         }
     }
 
@@ -183,6 +187,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (propertyType != AirshipComponentPropertyType.AirshipString) throw new InvalidCastException("Value is not a string");
             serializedValue.stringValue = value;
+            serializedModified.boolValue = true;
         }
     }
 
@@ -194,6 +199,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.Color) throw new InvalidCastException("Value is not a Color");
             serializedValue.stringValue = JsonUtility.ToJson(value);
+            serializedModified.boolValue = true;
         }
     }
 
@@ -205,6 +211,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.Vector2) throw new InvalidCastException("Value is not a Vector2");
             serializedValue.stringValue = JsonUtility.ToJson(value);
+            serializedModified.boolValue = true;
         }
     }
     
@@ -216,6 +223,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.Vector3) throw new InvalidCastException("Value is not a Vector3");
             serializedValue.stringValue = JsonUtility.ToJson(value);
+            serializedModified.boolValue = true;
         }
     }
     
@@ -227,6 +235,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.Vector4) throw new InvalidCastException("Value is not a Vector4");
             serializedValue.stringValue = JsonUtility.ToJson(value);
+            serializedModified.boolValue = true;
         }
     }
 
@@ -238,6 +247,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.Rect) throw new InvalidCastException("Value is not a Rect");
             serializedValue.stringValue = LuauMetadataPropertySerializer.SerializeRect(value);
+            serializedModified.boolValue = true;
         }
     }
 
@@ -250,6 +260,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.Quaternion) throw new InvalidCastException("Value is not a Quaternion");
             serializedValue.stringValue = JsonUtility.ToJson(value);
+            serializedModified.boolValue = true;
         }
     }
 
@@ -261,6 +272,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.AnimationCurve) throw new InvalidCastException("Value is not an AnimationCurve");
             serializedValue.stringValue = LuauMetadataPropertySerializer.SerializeAnimationCurve(value);
+            serializedModified.boolValue = true;
         }
     }
     
@@ -273,6 +285,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (type != AirshipSerializedType.Matrix4x4) throw new InvalidCastException("Value is not a Matrix4x4");
             serializedValue.stringValue = JsonUtility.ToJson(value);
+            serializedModified.boolValue = true;
         }
     }
 
@@ -284,6 +297,7 @@ public abstract class AirshipSerializedValue {
         set {
             if (enumType == null) throw new InvalidCastException("Invalid cast");
             serializedValue.stringValue = enumType.Serialize(value);
+            serializedModified.boolValue = true;
         }
     }
     

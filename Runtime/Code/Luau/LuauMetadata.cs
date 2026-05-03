@@ -384,6 +384,13 @@ namespace Luau {
             return false;
         }
 
+        internal void EmplaceValueWith(LuauMetadataProperty property) {
+            serializedValue = property.serializedValue;
+            serializedObject = property.serializedObject;
+            modified = property.modified;
+            defaultValue = property.defaultValue;
+        }
+
         internal bool HasSameTypesAs(LuauMetadataProperty other) {
             return type == other.type && objectType == other.objectType;
         }
@@ -469,6 +476,7 @@ namespace Luau {
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
             clone.items = items != null ? items.Clone() : new LuauMetadataArrayProperty();
+            clone.defaultValue = defaultValue;
             return clone;
         }
 
@@ -757,6 +765,18 @@ namespace Luau {
             }
 
             if (defaultValue == null) {
+                switch (ComponentType) {
+                    case AirshipComponentPropertyType.AirshipString:
+                        serializedValue = "";
+                        return true;
+                    case AirshipComponentPropertyType.AirshipBoolean:
+                    case AirshipComponentPropertyType.AirshipFloat:
+                    case AirshipComponentPropertyType.AirshipInt:
+                    case AirshipComponentPropertyType.AirshipLayerMask:
+                        serializedValue = 0.ToString(CultureInfo.InvariantCulture);
+                        return true;
+                }
+                
                 return false;
             }
             
@@ -885,6 +905,54 @@ namespace Luau {
             }
             
             return (metadata, null);
+        }
+
+        /// <summary>
+        /// Performs a synchronization operation with metadata based on a script, and an optional prefab metadata for inherited values
+        /// </summary>
+        /// <param name="scriptMetadata">The script metadata to synchronize with</param>
+        /// <param name="prefabMetadata">The prefab metadata to synchronize with</param>
+        /// <returns></returns>
+        /// <exception cref="IndexOutOfRangeException">If the script metadata properties are out of sync with the new property count</exception>
+        internal List<LuauMetadataProperty> SyncMetadataWith(LuauMetadata scriptMetadata, LuauMetadata prefabMetadata = null) {
+            if (scriptMetadata.properties.Count == 0) return new List<LuauMetadataProperty>();
+            var newProperties = new LuauMetadataProperty[scriptMetadata.properties.Count];
+
+            name = scriptMetadata.name;
+            decorators = new List<LuauMetadataDecoratorElement>(scriptMetadata.decorators);
+            
+            // Handle transactions
+            foreach (var sourceProperty in scriptMetadata.properties) {
+                var targetProperty = FindProperty(sourceProperty.name);
+                var index = scriptMetadata.FindPropertyIndex(sourceProperty.name);
+                var prefabProperty = prefabMetadata?.FindProperty(sourceProperty.name);
+
+                if (index > newProperties.Length - 1) {
+                    throw new IndexOutOfRangeException($"Got index {index} for {sourceProperty.name} when count is {newProperties.Length}");
+                }
+                
+                if (targetProperty == null) {
+                    var newProperty = sourceProperty.Clone();
+                    
+                    if (prefabProperty != null) newProperty.EmplaceValueWith(prefabProperty);
+                    newProperties[index] = newProperty;
+                } else {
+                    newProperties[index] = targetProperty;
+                }
+            }
+            
+            foreach (var property in newProperties) {
+                var scriptProperty = scriptMetadata.FindProperty(property.name);
+                if (scriptProperty == null) continue;
+
+                property.fileRef = scriptProperty.fileRef;
+                property.refPath = scriptProperty.refPath;
+                property.defaultValue = scriptProperty.defaultValue;
+                property.ReconcileDecorators(scriptProperty);
+            }
+            
+            properties = newProperties.ToList();
+            return newProperties.ToList();
         }
 
         
