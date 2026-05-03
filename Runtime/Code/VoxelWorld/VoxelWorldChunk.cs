@@ -492,14 +492,27 @@ namespace VoxelWorldStuff {
             customDataMap[(ushort)key] = data;
         }
 
-        public BinaryBlob GetCustomDataAt(Vector3Int worldPos) {
+        /// <summary>
+        /// Remove custom data from a voxel id
+        /// </summary>
+        public void RemoveCustomDataAt(Vector3Int worldPos) {
             var key = WorldPosToVoxelIndex(worldPos);
 
             if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
-                return null;
+                return;
             }
 
-            return customDataMap[(ushort)key];
+            customDataMap.Remove((ushort)key);
+        }
+
+        public BinaryBlob GetCustomDataAt(Vector3Int worldPos) {
+            var key = WorldPosToVoxelIndex(worldPos);
+
+            if (customDataMap.TryGetValue((ushort)key, out BinaryBlob value)) {
+                return value;
+            }
+
+            return null;
         }
 
 
@@ -524,7 +537,7 @@ namespace VoxelWorldStuff {
         /// This may require looping over all positions in chunk if it is being run
         /// for the first time.
         /// </summary>
-        private HashSet<int> GetKeysWithVoxels() {
+        public HashSet<int> GetKeysWithVoxels() {
             if (keysWithVoxelsDirty) {
                 keysWithVoxels.Clear();
                 for (var x = 0; x < chunkSize; x++) {

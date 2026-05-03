@@ -693,6 +693,29 @@ public partial class VoxelWorld : MonoBehaviour {
         return WorldPosToChunkKey(globalCoordinate);
     }
 
+    public Chunk[] GetChunks() {
+        return chunks.Values.ToArray();
+    }
+
+    public static Vector3 GetChunkKey(Chunk chunk) {
+        return chunk.GetKey();
+    }
+
+    public static int[] GetVoxelKeysInChunk(Chunk chunk) {
+        return chunk.GetKeysWithVoxels().ToArray();
+    }
+
+    public static ushort GetVoxelDataFromKey(Chunk chunk, int key) {
+        return chunk.readWriteVoxel[key];
+    }
+
+    public static BinaryBlob GetVoxelCustomDataFromKey(Chunk chunk, ushort key) {
+        if (chunk.customDataMap.TryGetValue(key, out BinaryBlob value)) {
+            return value;
+        }
+        return null;
+    }
+
     [HideFromTS]
     public Chunk GetChunkByVoxel(Vector3Int pos) {
         var chunkKey = WorldPosToChunkKey(pos);
@@ -761,7 +784,17 @@ public partial class VoxelWorld : MonoBehaviour {
 
         return value.GetCustomDataAt(posi);
     }
-    
+
+    public void RemoveVoxelCustomDataAt(Vector3 pos) {
+        var posi = FloorInt(pos);
+        var chunkKey = WorldPosToChunkKey(posi);
+        if (!chunks.TryGetValue(chunkKey, out var value)) {
+            return;
+        }
+
+        value.RemoveCustomDataAt(posi);
+    }
+
     public Color32 GetVoxelColorAt(Vector3 pos) {
         var posi = FloorInt(pos);
         var chunkKey = WorldPosToChunkKey(posi);
