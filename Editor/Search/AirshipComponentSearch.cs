@@ -7,7 +7,7 @@ using UnityEngine;
 using System.Reflection;
 using UnityEditor.Search;
 
-namespace Editor.Search {
+namespace Easy.Airship.Editor.Search {
     [SceneSearchEngine][InitializeOnLoad]
     public class AirshipComponentSearch : ISceneSearchEngine {
         private PropertyInfo searchFilterField;

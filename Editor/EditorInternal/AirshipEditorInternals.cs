@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
-namespace Editor.EditorInternal {
+namespace Easy.Airship.Editor.EditorInternal {
     public class AirshipEditorInternals {
         internal static bool SetBoldDefaultFont(bool isBold) {
             var wasBold = EditorGUIUtility.GetBoldDefaultFont();

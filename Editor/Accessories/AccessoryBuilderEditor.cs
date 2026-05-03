@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.Accessories {
+namespace Easy.Airship.Editor.Accessories {
     [CustomEditor(typeof(AccessoryBuilder))]
     [Icon("Packages/gg.easy.airship/Editor/shirt-outline-icon.png")]
     public class AccessoryBuilderEditor : UnityEditor.Editor{

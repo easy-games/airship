@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Editor.EditorInternal;
+using Easy.Airship.Editor.EditorInternal;
 using Luau;
 using UnityEditor;
 

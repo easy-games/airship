@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Code.Authentication;
 using Code.Http.Internal;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;

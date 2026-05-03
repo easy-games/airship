@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Editor;
+using Easy.Airship.Editor;
 using JetBrains.Annotations;
 using Unity.CodeEditor;
 using UnityEditor;

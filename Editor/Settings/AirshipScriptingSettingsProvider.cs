@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.Settings {
+namespace Easy.Airship.Editor.Settings {
     public class AirshipScriptingSettingsProvider : SettingsProvider  {
         public const string Path = "Project/Airship/Typescript";
 

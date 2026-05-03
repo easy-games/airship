@@ -2,8 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Editor;
-using Editor.Util;
+using Easy.Airship.Editor;
+using Easy.Airship.Editor.Util;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Airship.Editor;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using Newtonsoft.Json;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
@@ -13,7 +13,7 @@ using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace Editor {
+namespace Easy.Airship.Editor {
     public class ScopedRegistry {
         public string name;
         public string url;

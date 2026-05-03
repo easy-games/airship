@@ -1,5 +1,5 @@
 ﻿using System;
-using Editor.EditorInternal;
+using Easy.Airship.Editor.EditorInternal;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;

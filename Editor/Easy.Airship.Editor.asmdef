@@ -1,6 +1,6 @@
 {
     "name": "Easy.Airship.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "Easy.Airship.Editor",
     "references": [
         "GUID:7c88a4a7926ee5145ad2dfa06f454c67",
         "GUID:eab6daf15424fc24a878e63a8cd81ec2",

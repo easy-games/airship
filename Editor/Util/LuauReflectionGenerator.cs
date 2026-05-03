@@ -9,7 +9,7 @@ using System.Xml;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.Util {
+namespace Easy.Airship.Editor.Util {
 	public static class LuauReflectionGenerator {
 		private const string FileName = "airship_luau_reflection.xml";
 		

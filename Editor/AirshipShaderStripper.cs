@@ -1,6 +1,6 @@
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
 using System.Collections.Generic;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using UnityEditor.Build;
 using UnityEditor.Rendering;
 using UnityEngine;

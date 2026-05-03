@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Airship.Editor;
 using Code.Luau;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using Luau;
 using UnityEditor;
 using UnityEngine;

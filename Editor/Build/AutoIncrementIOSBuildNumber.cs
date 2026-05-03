@@ -3,7 +3,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace Editor.Build {
+namespace Easy.Airship.Editor.Build {
     public class AutoIncrementIOSBuildNumber : IPreprocessBuildWithReport {
         // This makes sure the script runs before the build starts.
         public int callbackOrder => 0;

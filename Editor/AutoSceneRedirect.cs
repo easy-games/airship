@@ -1,6 +1,6 @@
 using System;
 using Code.State;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;

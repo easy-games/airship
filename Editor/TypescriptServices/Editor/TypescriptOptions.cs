@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
-using Editor.Settings;
+using Easy.Airship.Editor.Settings;
 using NUnit.Framework;
 using Unity.CodeEditor;
 using UnityEditor;

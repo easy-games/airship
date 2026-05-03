@@ -3,7 +3,7 @@ using Luau;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor {
+namespace Easy.Airship.Editor {
     public static class BinaryFileDragDrop {
         [InitializeOnLoadMethod]
         private static void OnLoad() {

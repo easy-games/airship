@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
-namespace Editor {
+namespace Easy.Airship.Editor {
     [ScriptedImporter(1, "aseditorinfo")]
     public class AirshipEditorInfoImporter : ScriptedImporter {
         public override void OnImportAsset(AssetImportContext ctx) {

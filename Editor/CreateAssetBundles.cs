@@ -5,8 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Code.Bootstrap;
-using Editor.Packages;
-using Editor.Publish.Callback;
+using Easy.Airship.Editor.Packages;
+using Easy.Airship.Editor.Publish.Callback;
 using UnityEditor.Build.Pipeline;
 using UnityEditor.Build.Pipeline.Interfaces;
 using UnityEditor.Build.Pipeline.Tasks;
@@ -14,7 +14,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
-using Editor.Quality;
+using Easy.Airship.Editor.Quality;
 #endif
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;

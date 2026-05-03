@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using Airship.Editor;
 using Code.Luau;
-using Editor.EditorInternal;
+using Easy.Airship.Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor.IMGUI.Controls;

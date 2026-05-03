@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Debug = UnityEngine.Debug;
 
-namespace Editor {
+namespace Easy.Airship.Editor {
     /// <summary>
     /// Platform-dependent shell commands
     /// </summary>

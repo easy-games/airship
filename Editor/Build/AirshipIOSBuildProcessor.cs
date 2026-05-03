@@ -2,7 +2,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.Callbacks;
 
-namespace Editor.Build {
+namespace Easy.Airship.Editor.Build {
     internal class AirshipIOSBuildProcessor {
 
         [PostProcessBuild]

@@ -1,8 +1,8 @@
 ﻿#if UNITY_EDITOR
 using System.Collections.Generic;
 using System.Linq;
-using Editor;
-using Editor.EditorInternal;
+using Easy.Airship.Editor;
+using Easy.Airship.Editor.EditorInternal;
 using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;

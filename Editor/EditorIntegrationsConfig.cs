@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Airship.Editor;
-using Editor.Util;
+using Easy.Airship.Editor.Util;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using Editor.Packages;
+using Easy.Airship.Editor.Packages;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;

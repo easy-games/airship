@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
 
-namespace Editor.Publish.Callback {
+namespace Easy.Airship.Editor.Publish.Callback {
     public interface IBuildAirshipGameBundle : IOrderedCallback {
         /// <summary>
         /// Fired before building asset bundles for game

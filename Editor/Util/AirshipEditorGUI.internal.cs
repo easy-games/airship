@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using Code.Luau;
-using Editor.EditorInternal;
+using Easy.Airship.Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using Unity.VisualScripting.YamlDotNet.Core.Tokens;

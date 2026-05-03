@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Code.Luau;
-using Editor.EditorInternal;
+using Easy.Airship.Editor.EditorInternal;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Editor.Util {
+namespace Easy.Airship.Editor.Util {
     public static class PosixPath {
         public static string Join(ReadOnlySpan<char> path1, ReadOnlySpan<char> path2) {
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN || PLATFORM_STANDALONE_WIN
