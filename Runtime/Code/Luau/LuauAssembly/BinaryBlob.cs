@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Mirror;
@@ -169,4 +170,38 @@ namespace Assets.Luau {
             return bytes;
         }
     }
+    
+    /// <summary>
+    /// Serialization for Mirrors RPC calls using BinaryBlobs
+    /// </summary>
+    public static class BinaryBlobSerialization {
+        public static void WriteBinaryBlob(this NetworkWriter writer, BinaryBlob blob) {
+            writer.WriteBytesAndSize(blob.Data); // if it contains raw bytes
+        }
+
+        public static BinaryBlob ReadBinaryBlob(this NetworkReader reader) {
+            return new BinaryBlob(reader.ReadBytesAndSize());
+        }
+        
+        public static void WriteBinaryBlobMap(this NetworkWriter writer, Dictionary<ushort, BinaryBlob> map) {
+            writer.WriteInt(map.Count);
+            foreach (var kvp in map) {
+                writer.WriteUShort(kvp.Key);
+                writer.WriteBinaryBlob(kvp.Value);
+            }
+        }
+
+        public static Dictionary<ushort, BinaryBlob> ReadBinaryBlobMap(this NetworkReader reader) {
+            int count = reader.ReadInt();
+            var map = new Dictionary<ushort, BinaryBlob>(count);
+            for (int i = 0; i < count; i++) {
+                var key = reader.ReadUShort();
+                var value = reader.ReadBinaryBlob();
+                map[key] = value;
+            }
+
+            return map;
+        }
+    }
+    
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Buffers;
+using System.Collections.Generic;
+using Assets.Luau;
 using Code.Zstd;
 using Mirror;
 using UnityEngine;
@@ -39,6 +41,20 @@ public static class ChunkSerializer {
         ArrayPool<byte>.Shared.Return(voxelByteAndColorArray);
         ArrayPool<byte>.Shared.Return(compressionBuffer);
         
+        // Custom Data
+        writer.WriteUInt((uint)value.customDataMap.Count);
+        foreach (var kvp in value.customDataMap) {
+            writer.WriteUShort(kvp.Key);
+            writer.WriteBinaryBlob(kvp.Value);
+        }
+        
+        // Damage Map
+        writer.WriteUInt((uint)value.damageMap.Count);
+        foreach (var kvp in value.damageMap) {
+            writer.WriteUShort(kvp.Key);
+            writer.WriteFloat(kvp.Value);
+        }
+        
         Profiler.EndSample();
         Profiler.EndSample();
     }
@@ -64,6 +80,22 @@ public static class ChunkSerializer {
         
         ArrayPool<byte>.Shared.Return(voxelByteAndColorArray);
         ArrayPool<byte>.Shared.Return(decompressedData);
+        
+        // Custom Data
+        var customData = new Dictionary<ushort, BinaryBlob>();
+        int customCount = (int)reader.ReadUInt();
+        for (int i = 0; i < customCount; i++) {
+            customData.Add(reader.ReadUShort(), reader.ReadBinaryBlob());
+        }
+        chunk.customDataMap = customData;
+        
+        // Damage Map
+        var damage = new Dictionary<ushort, float>();
+        int damageCount = (int)reader.ReadUInt();
+        for (int i = 0; i < damageCount; i++) {
+            damage.Add(reader.ReadUShort(), reader.ReadFloat());
+        }
+        chunk.damageMap = damage;
         
         chunk.MarkKeysWithVoxelsDirty();
         return chunk;

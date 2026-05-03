@@ -28,6 +28,7 @@ namespace VoxelWorldStuff {
     // blockId (12bits) Rot (3bits) solid (1bit)
     // 000000000000     000         0
 
+    [LuauAPI]
     public class Chunk {
 #if !UNITY_SERVER
         private static Material simpleLitMaterial = new(Shader.Find("Universal Render Pipeline/Lit"));
@@ -486,10 +487,21 @@ namespace VoxelWorldStuff {
             var key = WorldPosToVoxelIndex(worldPos);
 
             if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                Debug.LogError("Unable to write custom data at: " + worldPos + " no chunk found");
                 return;
             }
 
             customDataMap[(ushort)key] = data;
+        }
+
+        public void DeleteCustomDataAt(Vector3Int worldPos) {
+            var key = WorldPosToVoxelIndex(worldPos);
+
+            if (key < 0 || key >= chunkSize * chunkSize * chunkSize) {
+                return;
+            }
+
+            customDataMap.Remove((ushort)key);
         }
 
         public BinaryBlob GetCustomDataAt(Vector3Int worldPos) {
@@ -500,6 +512,16 @@ namespace VoxelWorldStuff {
             }
 
             return customDataMap[(ushort)key];
+        }
+
+        public BinaryBlob[] GetAllCustomData() {
+            BinaryBlob[] customData = new BinaryBlob[customDataMap.Count];
+            var i = 0;
+            foreach (var data in customDataMap) {
+                customData[i] = data.Value;
+                i++;
+            }
+            return customData;
         }
 
 
@@ -1024,4 +1046,5 @@ namespace VoxelWorldStuff {
             return obj;
         }
     }
+
 }

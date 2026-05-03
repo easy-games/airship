@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Assets.Luau;
 using Code.Zstd;
 using Luau;
+using Mirror;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -445,11 +446,13 @@ public partial class VoxelWorld : MonoBehaviour {
         var chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out var chunk);
         if (chunk == null) {
+            Debug.LogError("Unable to write custom data at: " + pos + " no voxel chunk found");
             return;
         }
 
         var voxelPos = FloorInt(pos);
         if (chunk.GetVoxelDataAt(voxelPos) == 0) {
+            Debug.LogError("Unable to write custom data at: " + pos + " no voxel found");
             return;
         }
 
@@ -700,8 +703,7 @@ public partial class VoxelWorld : MonoBehaviour {
         return value;
     }
 
-    [HideFromTS]
-    public Chunk GetChunkByVoxel(Vector3 pos) {
+    public Chunk GetChunkByWorldPos(Vector3 pos) {
         var chunkKey = WorldPosToChunkKey(pos);
         chunks.TryGetValue(chunkKey, out var value);
         return value;
@@ -710,6 +712,16 @@ public partial class VoxelWorld : MonoBehaviour {
     public Chunk GetChunkByChunkPos(Vector3Int pos) {
         chunks.TryGetValue(pos, out var chunk);
         return chunk;
+    }
+
+    public Chunk[] GetAllLoadedChunks() {
+        var chunkArray = new Chunk[this.chunks.Count];
+        var i = 0;
+        foreach (var kvp in chunks) {
+            chunkArray[i] = kvp.Value;
+            i++;
+        }
+        return chunkArray;
     }
 
     public (ushort, Chunk) GetVoxelAndChunkAt(Vector3Int pos) {
@@ -1231,7 +1243,7 @@ public partial class VoxelWorld : MonoBehaviour {
     /// immediately if the chunk is already loaded.
     /// </summary>
     public async Task WaitForChunkToLoad(Vector3 voxel) {
-        var chunk = GetChunkByVoxel(voxel);
+        var chunk = GetChunkByWorldPos(voxel);
         if (chunk == null) {
             return;
         }
@@ -1561,6 +1573,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
     public LuauBuffer ToBuffer() {
         var saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
+        // Serialize the voxel world into a savable format
         saveFile.CreateFromVoxelWorld(this);
 
         using var memStream = new MemoryStream();
@@ -1598,7 +1611,6 @@ public partial class VoxelWorld : MonoBehaviour {
         saveFile.chunksCompressedV2 = true;
         
         // Clear and prepare the world for new chunks and meshes 
-        DeleteChildGameObjects(gameObject);
         PrepareVoxelWorldGameObject();
         loadingStatus = LoadingStatus.Loading;
         ClearProcessingMeshChunks();
