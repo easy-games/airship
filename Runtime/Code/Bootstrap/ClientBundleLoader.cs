@@ -110,7 +110,16 @@ namespace Code.Bootstrap {
                     i++;
                 }
             }, false);
-            NetworkServer.RegisterHandler<ClientFinishedPreparingMessage>((conn, data) => {
+            NetworkServer.RegisterHandler<ClientFinishedPreparingMessage>(async (conn, data) => {
+                if (serverBootstrap.hasStartupSceneFailure) {
+                    conn.Send(new KickMessage() {
+                        reason = serverBootstrap.startupSceneFailureReason,
+                    });
+                    await Awaitable.WaitForSecondsAsync(1);
+                    conn.Disconnect();
+                    return;
+                }
+
                 var sceneName = serverBootstrap.startupConfig.StartingSceneName;
                 if (LuauProtection.IsProtectedSceneName(sceneName)) {
                     Debug.LogError("Invalid starting scene name: " + sceneName);
@@ -125,6 +134,15 @@ namespace Code.Bootstrap {
             NetworkServer.RegisterHandler<GreetingMessage>(async (conn, data) => {
                 while (!this.serverBootstrap.isServerReady) {
                     await Awaitable.NextFrameAsync();
+                }
+
+                if (this.serverBootstrap.hasStartupSceneFailure) {
+                    conn.Send(new KickMessage() {
+                        reason = this.serverBootstrap.startupSceneFailureReason,
+                    });
+                    await Awaitable.WaitForSecondsAsync(1);
+                    conn.Disconnect();
+                    return;
                 }
 
                 // Validate scene name
